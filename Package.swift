@@ -10,6 +10,9 @@ let package = Package(
         .library(
             name: "SwiftMP",
             targets: ["SwiftMP"]),
+        .library(
+            name: "minigmp",
+            targets: ["Cminigmp"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -19,8 +22,14 @@ let package = Package(
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
-            name: "SwiftMP",
+            name: "Cminigmp",
             dependencies: []),
+        .target(
+            name: "SwiftMP",
+            dependencies: ["Cminigmp"]),
+        .testTarget(
+            name: "CminigmpTests",
+            dependencies: ["Cminigmp"]),
         .testTarget(
             name: "SwiftMPTests",
             dependencies: ["SwiftMP"]),
