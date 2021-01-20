@@ -10,8 +10,6 @@
 
 #include <stdio.h>
 
-#define __GMP_DECLSPEC
-
 #include <mini-gmp.h>
 #include <mini-mpq.h>
 
