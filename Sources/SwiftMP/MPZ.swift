@@ -1,5 +1,5 @@
 //
-//  MPZ.swift
+//  Self.swift
 //  
 //
 //  Created by José María Gómez Cama on 16/01/2021.
@@ -11,20 +11,33 @@ import Cminigmp
 public struct MPZ {
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
+    @usableFromInline internal typealias bWord = UnsafeMutableBufferPointer<Word>
+    @usableFromInline internal typealias pMPZ = UnsafeMutablePointer<mpz_t>
+    @usableFromInline internal typealias bMPZ = UnsafeMutableBufferPointer<mpz_t>
     @usableFromInline static let wordBits = MemoryLayout<Word>.size * 8
     @usableFromInline internal static let mask = ~Word(0)
 
     @usableFromInline internal var value =
-        UnsafeMutablePointer<mpz_t>.allocate(capacity: 1)
+        pMPZ.allocate(capacity: 1)
 
-    internal var limbs: UnsafeMutableBufferPointer<Word> {
-        return UnsafeMutableBufferPointer(start: value[0]._mp_d,
-                                          count: abs(Int(value[0]._mp_size)))
+    @usableFromInline internal var limbs: bWord {
+        return bWord(start: value[0]._mp_d,
+                     count: abs(Int(value[0]._mp_size)))
     }
 
     @inlinable
-    init() {
+    public init() {
         mpz_init(value)
+    }
+
+    @usableFromInline
+    internal init?(mpz: bMPZ) {
+        if mpz.count != 1 {
+            return nil
+        }
+        value.deallocate()
+        value = pMPZ.allocate(capacity: 1)
+        value.initialize(to: mpz[0])
     }
 
     @inlinable
@@ -39,20 +52,25 @@ public struct MPZ {
 
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryInteger {
-        let si = source as? Int
-        if si != nil {
-            mpz_init_set_si(value, si!)
-            return
-        }
-        let su = source as? UInt
-        if su != nil {
-            mpz_init_set_ui(value, su!)
-            return
-        }
-        let sz = source as? MPZ
+        let sz = source as? Self
         if sz != nil {
             mpz_init_set(value, sz!.value)
+            return
         }
+        if T.isSigned {
+            let si = source as? Int
+            if si != nil {
+                mpz_init_set_si(value, si!)
+                return
+            }
+        } else {
+            let su = source as? UInt
+            if su != nil {
+                mpz_init_set_ui(value, su!)
+                return
+            }
+        }
+        return nil
     }
 
     @inlinable
@@ -65,6 +83,7 @@ public struct MPZ {
         return nil
     }
 
+    @inlinable
     public init<T>(_ source: T) where T : BinaryFloatingPoint {
         let d = source as? Double
         if d != nil {
@@ -76,7 +95,7 @@ public struct MPZ {
 
     @inlinable
     public init<T>(_ source: T) where T : BinaryInteger {
-        let sz = source as? MPZ
+        let sz = source as? Self
         if sz != nil {
             mpz_init_set(value, sz!.value)
             return
@@ -102,7 +121,7 @@ public struct MPZ {
             mpz_init_set_ui(value, su!)
             return
         }
-        let sz = val as? MPZ
+        let sz = val as? Self
         if sz != nil {
             mpz_init_set(value, sz!.value)
         }
@@ -120,7 +139,7 @@ public struct MPZ {
             mpz_init_set_ui(value, su!)
             return
         }
-        let sz = source as? MPZ
+        let sz = source as? Self
         if sz != nil {
             mpz_init_set(value, sz!.value)
         }
@@ -138,34 +157,38 @@ public struct MPZ {
         mpz_init_set_str(self.value, str, Int32(base))
     }
 
+    @inlinable
     public func probablyPrime() -> Bool {
         return mpz_probab_prime_p(value, 32) == 0
     }
 
-    public static func gcd(_ lhs: MPZ, _ rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func gcd(_ lhs: Self, _ rhs: Self) -> Self {
+        let result = Self()
         mpz_gcd(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func lcm(_ lhs: MPZ, _ rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func lcm(_ lhs: Self, _ rhs: Self) -> Self {
+        let result = Self()
         mpz_lcm(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func factorial(_ value: UInt) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func factorial(_ value: UInt) -> Self {
+        let result = Self()
         mpz_fac_ui(result.value, value)
         return result
     }
 
     @inlinable
     var nonzeroBitCount: Int {
-        let v = MPZ()
+        let v = Self()
         mpz_set(v.value, value)
         if signum() < 0 {
-            let mask = MPZ()
+            let mask = Self()
             mpz_set_si(mask.value, -1)
             mpz_mul_2exp(mask.value, mask.value, UInt(bitWidth))
             mpz_com(mask.value, mask.value)
@@ -177,80 +200,48 @@ public struct MPZ {
 }
 
 extension MPZ: Comparable {
-    public static func == (lhs: MPZ, rhs: MPZ) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         return mpz_cmp(lhs.value, rhs.value) == 0
     }
 
-    public static func ==<RHS> (lhs: MPZ, rhs: RHS) -> Bool where RHS : BinaryInteger {
-        let si = rhs as? Int
-        if si != nil {
-            return mpz_cmp_si(lhs.value, si!) == 0
-        }
-        let su = rhs as? UInt
-        if su != nil {
-            return mpz_cmp_ui(lhs.value, su!) == 0
-        }
-        return mpz_cmp(lhs.value, MPZ(rhs).value) == 0
+    @inlinable
+    public static func ==<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
+        return mpz_cmp(lhs.value, Self(rhs).value) == 0
     }
 
-    public static func ==<LHS> (lhs: LHS, rhs: MPZ) -> Bool where LHS : BinaryInteger {
-        let si = lhs as? Int
-        if si != nil {
-            return mpz_cmp_si(rhs.value, si!) == 0
-        }
-        let su = lhs as? UInt
-        if su != nil {
-            return mpz_cmp_ui(rhs.value, su!) == 0
-        }
-        return mpz_cmp(rhs.value, MPZ(lhs).value) == 0
+    @inlinable
+    public static func ==<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
+        return mpz_cmp(Self(lhs).value, rhs.value) == 0
     }
 
-    public static func == (lhs: MPZ, rhs: UInt) -> Bool {
-        return mpz_cmp_ui(lhs.value, rhs) == 0
-    }
-
-    public static func == (lhs: UInt, rhs: MPZ) -> Bool {
-        return mpz_cmp_ui(rhs.value, lhs) == 0
-    }
-
-    public static func < (lhs: MPZ, rhs: MPZ) -> Bool {
+    @inlinable
+    public static func < (lhs: Self, rhs: Self) -> Bool {
         return mpz_cmp(lhs.value, rhs.value) < 0
     }
 
-    public static func < (lhs: MPZ, rhs: Int) -> Bool {
-        return mpz_cmp_si(lhs.value, rhs) < 0
+    @inlinable
+    public static func <<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
+        return mpz_cmp(lhs.value, Self(rhs).value) < 0
     }
 
-    public static func < (lhs: Int, rhs: MPZ) -> Bool {
-        return mpz_cmp_si(rhs.value, lhs) > 0
+    @inlinable
+    public static func <<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
+        return mpz_cmp(Self(lhs).value, rhs.value) < 0
     }
 
-    public static func < (lhs: MPZ, rhs: UInt) -> Bool {
-        return mpz_cmp_ui(lhs.value, rhs) < 0
-    }
-
-    public static func < (lhs: UInt, rhs: MPZ) -> Bool {
-        return mpz_cmp_ui(rhs.value, lhs) > 0
-    }
-
-    public static func > (lhs: MPZ, rhs: MPZ) -> Bool {
+    @inlinable
+    public static func > (lhs: Self, rhs: Self) -> Bool {
         return mpz_cmp(lhs.value, rhs.value) > 0
     }
 
-    public static func > (lhs: MPZ, rhs: Int) -> Bool {
-        return mpz_cmp_si(lhs.value, rhs) > 0
+    @inlinable
+    public static func ><RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
+        return mpz_cmp(lhs.value, Self(rhs).value) > 0
     }
 
-    public static func > (lhs: Int, rhs: MPZ) -> Bool {
-        return mpz_cmp_si(rhs.value, lhs) < 0
-    }
-
-    public static func > (lhs: MPZ, rhs: UInt) -> Bool {
-        return mpz_cmp_ui(lhs.value, rhs) > 0
-    }
-
-    public static func > (lhs: UInt, rhs: MPZ) -> Bool {
-        return mpz_cmp_ui(rhs.value, lhs) < 0
+    @inlinable
+    public static func ><LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
+        return mpz_cmp(Self(lhs).value, rhs.value) > 0
     }
 }
 
@@ -259,82 +250,96 @@ extension MPZ: ExpressibleByIntegerLiteral {
 }
 
 extension MPZ: AdditiveArithmetic {
-    public static var zero: MPZ{
-        return MPZ()
+    @inlinable
+    public static var zero: Self{
+        return Self()
     }
 
-    public static func + (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func + (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_add(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func - (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func - (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_sub(result.value, lhs.value, rhs.value)
         return result
     }
 }
 
 extension MPZ: Numeric {
-    public typealias Magnitude = MPZ
+    public typealias Magnitude = Self
 
+    @inlinable
     public var magnitude: Magnitude {
-        let result = MPZ()
+        let result = Self()
         mpz_abs(result.value, value)
         return result
     }
 
-    public static func * (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func * (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_mul(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func *= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func *= (lhs: inout Self, rhs: Self) {
         mpz_mul(lhs.value, lhs.value, rhs.value)
     }
 
 }
 
 extension MPZ: SignedNumeric {
-    public static prefix func +(_ x: MPZ) -> MPZ {
+    @inlinable
+    public static prefix func +(_ x: Self) -> Self {
         return x
     }
 
-    public static prefix func -(_ x: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static prefix func -(_ x: Self) -> Self {
+        let result = Self()
         mpz_neg(result.value, x.value)
         return result
     }
 
+    @inlinable
     public func negate() {
         mpz_neg(value, value)
     }
 }
 
 extension MPZ: Hashable {
+    @inlinable
     public func hash(into hasher: inout Hasher) {
         hasher.combine(value)
     }
 }
 
 extension MPZ: BinaryInteger {
+    @inlinable
     static public var isSigned: Bool {
         return true
     }
 
+    @inlinable
     public func signum() -> Self {
-        return MPZ(mpz_sgn(value))
+        return Self(mpz_sgn(value))
     }
 
+    @inlinable
     public func quotientAndRemainder(dividingBy rhs: Self) -> (quotient: Self, remainder: Self) {
-        let quotient = MPZ()
-        let reminder = MPZ()
+        let quotient = Self()
+        let reminder = Self()
         mpz_tdiv_qr(quotient.value, reminder.value, value, rhs.value)
         return (quotient, reminder)
     }
 
+    @inlinable
     public var words: [Word] {
         let b = limbs
         if mpz_sgn(value) < 0 {
@@ -359,21 +364,21 @@ extension MPZ: BinaryInteger {
             return 1
         }
         var word = 0
-        var bits = MPZ.wordBits
+        var bits = Self.wordBits
         for idx in stride(from: abs(Int(value[0]._mp_size)) - 1, through: 0, by: -1) {
             let v = value[0]._mp_d[idx]
             if v == 0 {
                 continue
             } else {
                 word = idx
-                var mask = MPZ.Word(1) << (bits - 1)
+                var mask = Self.Word(1) << (bits - 1)
                 while (v & mask) == Word(0) {
                     bits -= 1
                     mask >>= 1
                 }
             }
         }
-        return word * MPZ.wordBits + bits + 1 // Sign bit
+        return word * Self.wordBits + bits + 1 // Sign bit
     }
 
     public var trailingZeroBitCount: Int {
@@ -388,79 +393,94 @@ extension MPZ: BinaryInteger {
         return idx! + limbs[idx!].trailingZeroBitCount
     }
 
-    public static prefix func ~ (x: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static prefix func ~ (x: Self) -> Self {
+        let result = Self()
         mpz_com(result.value, x.value)
         return result
     }
 
-    public static func / (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func / (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_tdiv_q(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func /= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func /= (lhs: inout Self, rhs: Self) {
         mpz_tdiv_q(lhs.value, lhs.value, rhs.value)
     }
 
-    public static func % (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func % (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_tdiv_r(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func %= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func %= (lhs: inout Self, rhs: Self) {
         mpz_tdiv_r(lhs.value, lhs.value, rhs.value)
     }
 
-    public static func & (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func & (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_and(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func &= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func &= (lhs: inout Self, rhs: Self) {
         mpz_and(lhs.value, lhs.value, rhs.value)
     }
 
-    public static func | (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func | (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_ior(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func |= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func |= (lhs: inout Self, rhs: Self) {
         mpz_ior(lhs.value, lhs.value, rhs.value)
     }
 
-    public static func ^ (lhs: MPZ, rhs: MPZ) -> MPZ {
-        let result = MPZ()
+    @inlinable
+    public static func ^ (lhs: Self, rhs: Self) -> Self {
+        let result = Self()
         mpz_xor(result.value, lhs.value, rhs.value)
         return result
     }
 
-    public static func ^= (lhs: inout MPZ, rhs: MPZ) {
+    @inlinable
+    public static func ^= (lhs: inout Self, rhs: Self) {
         mpz_xor(lhs.value, lhs.value, rhs.value)
     }
 
-    public static func >> <RHS>(lhs: MPZ, rhs: RHS) -> MPZ where RHS : BinaryInteger {
-        let result = MPZ()
+    @inlinable
+    public static func >> <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
+        let result = Self()
         mpz_fdiv_q_2exp(result.value, lhs.value, UInt(rhs))
         return result
     }
 
-    public static func >>= <RHS>(lhs: inout MPZ, rhs: RHS) where RHS : BinaryInteger {
+    @inlinable
+    public static func >>= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
         mpz_fdiv_q_2exp(lhs.value, lhs.value, UInt(rhs))
     }
 
-    public static func << <RHS>(lhs: MPZ, rhs: RHS) -> MPZ where RHS : BinaryInteger {
-        let result = MPZ()
+    @inlinable
+    public static func << <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
+        let result = Self()
         mpz_mul_2exp(result.value, lhs.value, UInt(rhs))
         return result
     }
 
-    public static func <<= <RHS>(lhs: inout MPZ, rhs: RHS) where RHS : BinaryInteger {
+    @inlinable
+    public static func <<= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
         mpz_mul_2exp(lhs.value, lhs.value, UInt(rhs))
     }
 }

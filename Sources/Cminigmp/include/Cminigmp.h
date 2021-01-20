@@ -13,5 +13,6 @@
 #define __GMP_DECLSPEC
 
 #include <mini-gmp.h>
+#include <mini-mpq.h>
 
 #endif /* Header_h */

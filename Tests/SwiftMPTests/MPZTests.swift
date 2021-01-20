@@ -1,7 +1,7 @@
 import XCTest
 @testable import SwiftMP
 
-final class MPNTests: XCTestCase {
+final class MPZTests: XCTestCase {
     func testCreateMPZ() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
