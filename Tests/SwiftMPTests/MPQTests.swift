@@ -54,9 +54,8 @@ final class MPQTests: XCTestCase {
         let str = "0x12345678901234567890"
         let a = MPQ(stringLiteral: str)
         let b = -a
-        XCTAssertEqual(a.debugDescription, "MPQ(\"0x12345678901234567890\")")
-        let description = b.debugDescription
-        XCTAssertEqual(description, "MPQ(\"-0x12345678901234567890\")")
+        XCTAssertEqual(MPQ(a.debugDescription)!.debugDescription, a.debugDescription)
+        XCTAssertEqual(MPQ(b.debugDescription)!.debugDescription, b.debugDescription)
     }
 
     func testNegate() {

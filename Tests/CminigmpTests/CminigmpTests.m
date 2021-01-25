@@ -8,23 +8,6 @@
 #import <XCTest/XCTest.h>
 #include <Cminigmp.h>
 
-void
-testfree (void *p)
-{
-    void (*freefunc) (void *, size_t);
-    mp_get_memory_functions (NULL, NULL, &freefunc);
-
-    freefunc (p, 0);
-}
-
-void
-dump (const char *label, const mpz_t x)
-{
-    char *buf = mpz_get_str (NULL, 16, x);
-    fprintf (stderr, "%s: %s\n", label, buf);
-    testfree (buf);
-}
-
 @interface CminigmpTests : XCTestCase
 
 @end
@@ -43,7 +26,6 @@ dump (const char *label, const mpz_t x)
     // This is an example of a functional test case.
     // Use XCTAssert and related functions to verify your tests produce the correct results.
 
-    unsigned i;
     mpz_t a, b, res, ref;
 
     mpz_init_set_si(a, 23);
@@ -52,15 +34,7 @@ dump (const char *label, const mpz_t x)
     mpz_init_set_si(ref, 77);
 
     mpz_add(res, a, b);
-    if (mpz_cmp (res, ref))
-    {
-        fprintf (stderr, "mpz_add failed:\n");
-        dump ("a", a);
-        dump ("b", b);
-        dump ("r", res);
-        dump ("ref", ref);
-        abort ();
-    }
+    XCTAssert(mpz_cmp (res, ref) == 0);
     mpz_clear (a);
     mpz_clear (b);
     mpz_clear (res);

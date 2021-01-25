@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Cminigmp
+import Cmpfr
 
 public struct MPQ {
     public typealias Word = mp_limb_t
@@ -330,7 +330,7 @@ extension MPQ: CustomStringConvertible {
         let base: Int32 = 10
         let size = mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_num), base)
             + mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_den), base) + 3
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size)
+        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
         _ = mpq_get_str(buffer, base, value)
         let str = String(cString: buffer)
         buffer.deallocate()
@@ -340,17 +340,28 @@ extension MPQ: CustomStringConvertible {
 
 extension MPQ: CustomDebugStringConvertible {
     public var debugDescription: String {
-        let base: Int32 = 10
+        let base: Int32 = 16
         let size = mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_num), base)
             + mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_den), base) + 3
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size)
-        _ = mpq_get_str(buffer, 16, magnitude.value)
+        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
+        _ = mpq_get_str(buffer, base, magnitude.value)
         let str = String(cString: buffer)
         buffer.deallocate()
         if mpq_sgn(value) < 0 {
-            return "MPQ(\"-0x\(str)\")"
+            return "-0x\(str)"
         } else {
-            return "MPQ(\"0x\(str)\")"
+            return "0x\(str)"
+        }
+    }
+}
+
+extension MPQ: LosslessStringConvertible {
+    @inlinable
+    public init?(_ description: String) {
+        let str = description.cString(using: .ascii)!
+        mpq_init(self.value)
+        if mpq_set_str(self.value, str, 0) != 0 {
+            return nil
         }
     }
 }

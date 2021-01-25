@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Cminigmp
+import Cmpfr
 
 public struct MPZ {
     public typealias Word = mp_limb_t
@@ -15,7 +15,7 @@ public struct MPZ {
     @usableFromInline internal typealias pMPZ = UnsafeMutablePointer<mpz_t>
     @usableFromInline internal typealias bMPZ = UnsafeMutableBufferPointer<mpz_t>
     @usableFromInline static let wordBits = MemoryLayout<Word>.size * 8
-    @usableFromInline internal static let mask = ~Word(0)
+    @usableFromInline internal static let wordMask = ~Word(0)
 
     @usableFromInline internal var value =
         pMPZ.allocate(capacity: 1)
@@ -359,26 +359,10 @@ extension MPZ: BinaryInteger {
     }
 
     public var bitWidth: Int {
-        let n = abs(Int(value[0]._mp_size))
-        if n == 0 {
+        if mpz_size(value) == 0 {
             return 1
         }
-        var word = 0
-        var bits = Self.wordBits
-        for idx in stride(from: abs(Int(value[0]._mp_size)) - 1, through: 0, by: -1) {
-            let v = value[0]._mp_d[idx]
-            if v == 0 {
-                continue
-            } else {
-                word = idx
-                var mask = Self.Word(1) << (bits - 1)
-                while (v & mask) == Word(0) {
-                    bits -= 1
-                    mask >>= 1
-                }
-            }
-        }
-        return word * Self.wordBits + bits + 1 // Sign bit
+        return mpz_sizeinbase(value, 2) + 1
     }
 
     public var trailingZeroBitCount: Int {
@@ -504,7 +488,7 @@ extension MPZ: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
         let size = mpz_sizeinbase(value, base) + 2
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size)
+        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
         _ = mpz_get_str(buffer, base, value)
         let str = String(cString: buffer)
         buffer.deallocate()
@@ -514,16 +498,27 @@ extension MPZ: CustomStringConvertible {
 
 extension MPZ: CustomDebugStringConvertible {
     public var debugDescription: String {
-        let base: Int32 = 10
+        let base: Int32 = 16
         let size = mpz_sizeinbase(value, base) + 2
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size)
-        _ = mpz_get_str(buffer, 16, magnitude.value)
+        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
+        _ = mpz_get_str(buffer, base, magnitude.value)
         let str = String(cString: buffer)
         buffer.deallocate()
         if mpz_sgn(value) < 0 {
-            return "MPZ(\"-0x\(str)\")"
+            return "-0x\(str)"
         } else {
-            return "MPZ(\"0x\(str)\")"
+            return "0x\(str)"
+        }
+    }
+}
+
+extension MPZ: LosslessStringConvertible {
+    @inlinable
+    public init?(_ description: String) {
+        let str = description.cString(using: .ascii)!
+        mpz_init(self.value)
+        if mpz_set_str(self.value, str, 0) != 0 {
+            return nil
         }
     }
 }

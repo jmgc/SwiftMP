@@ -11,8 +11,8 @@ final class MPZTests: XCTestCase {
         let b: MPZ = 1
         XCTAssertEqual(a, b)
 
-        a = MPZ(MPZ.mask)
-        XCTAssertEqual(a, MPZ(MPZ.mask))
+        a = MPZ(MPZ.wordMask)
+        XCTAssertEqual(a, MPZ(MPZ.wordMask))
 
         a = 2.5e21
         let c = MPZ("2500000000000000000000")
@@ -83,9 +83,9 @@ final class MPZTests: XCTestCase {
         let str = "0x12345678901234567890"
         let a = MPZ(stringLiteral: str)
         let b = -a
-        XCTAssertEqual(a.debugDescription, "MPZ(\"0x12345678901234567890\")")
+        XCTAssertEqual(a.debugDescription, "0x12345678901234567890")
         let description = b.debugDescription
-        XCTAssertEqual(description, "MPZ(\"-0x12345678901234567890\")")
+        XCTAssertEqual(description, "-0x12345678901234567890")
     }
 
     func testNegate() {
