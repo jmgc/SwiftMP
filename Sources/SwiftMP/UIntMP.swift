@@ -8,7 +8,7 @@
 import Foundation
 import Cmpfr
 
-public struct MPU {
+public struct UIntMP {
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
     @usableFromInline internal typealias bWord = UnsafeMutableBufferPointer<Word>
@@ -28,14 +28,14 @@ public struct MPU {
 
     @usableFromInline
     internal mutating func wrap(_ bits: Int) {
-        let wrap = MPU(1) << bits
+        let wrap = UIntMP(1) << bits
         mpz_sub_ui(wrap.value, wrap.value, 1)
         mpz_and(value, value, wrap.value)
     }
 
     @inlinable
-    public var mask: MPU {
-        let wrap = MPU(1) << bitWidth
+    public var mask: UIntMP {
+        let wrap = UIntMP(1) << bitWidth
         mpz_sub_ui(wrap.value, wrap.value, 1)
         return wrap
     }
@@ -171,7 +171,7 @@ public struct MPU {
             mpz_init_set(value, ss!.value)
             return
         }
-        let sz = source as? MPZ
+        let sz = source as? IntMP
         if sz != nil {
             mpz_init_set(value, sz!.value)
             return
@@ -241,7 +241,7 @@ public struct MPU {
     }
 }
 
-extension MPU: Comparable {
+extension UIntMP: Comparable {
     @inlinable
     public static func == (lhs: Self, rhs: Self) -> Bool {
         let lhsSize = lhs.bitWidth
@@ -279,11 +279,11 @@ extension MPU: Comparable {
     }
 }
 
-extension MPU: ExpressibleByIntegerLiteral {
+extension UIntMP: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = UInt
 }
 
-extension MPU: AdditiveArithmetic {
+extension UIntMP: AdditiveArithmetic {
     @inlinable
     public static var zero: Self{
         return Self()
@@ -320,7 +320,7 @@ extension MPU: AdditiveArithmetic {
     }
 }
 
-extension MPU: Numeric {
+extension UIntMP: Numeric {
     public typealias Magnitude = Self
 
     @inlinable
@@ -343,14 +343,14 @@ extension MPU: Numeric {
     }
 }
 
-extension MPU: Hashable {
+extension UIntMP: Hashable {
     @inlinable
     public func hash(into hasher: inout Hasher) {
         hasher.combine(value)
     }
 }
 
-extension MPU: BinaryInteger {
+extension UIntMP: BinaryInteger {
     @inlinable
     static public var isSigned: Bool {
         return false
@@ -502,14 +502,14 @@ extension MPU: BinaryInteger {
     }
 }
 
-extension MPU: UnsignedInteger {
+extension UIntMP: UnsignedInteger {
 }
 
-extension MPU: ExpressibleByStringLiteral {
+extension UIntMP: ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
 }
 
-extension MPU: CustomStringConvertible {
+extension UIntMP: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
         let size = mpz_sizeinbase(value, base) + 2
@@ -521,7 +521,7 @@ extension MPU: CustomStringConvertible {
     }
 }
 
-extension MPU: CustomDebugStringConvertible {
+extension UIntMP: CustomDebugStringConvertible {
     public var debugDescription: String {
         let base: Int32 = 16
         let u = mask
@@ -535,7 +535,7 @@ extension MPU: CustomDebugStringConvertible {
     }
 }
 
-extension MPU: LosslessStringConvertible {
+extension UIntMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
         let str = description.cString(using: .ascii)!
@@ -549,7 +549,7 @@ extension MPU: LosslessStringConvertible {
     }
 }
 
-extension MPU: RandomAccessCollection {
+extension UIntMP: RandomAccessCollection {
     public typealias Element = Int
 
     public typealias Index = Int
@@ -577,5 +577,5 @@ extension MPU: RandomAccessCollection {
     }
 }
 
-extension MPU: MutableCollection {
+extension UIntMP: MutableCollection {
 }

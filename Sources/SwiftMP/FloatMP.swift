@@ -9,7 +9,7 @@ import Foundation
 import Cmpfr
 import RealModule
 
-public struct MPFR {
+public struct FloatMP {
     @usableFromInline internal typealias Round = mpfr_rnd_t
     public typealias Precission = mpfr_prec_t
     
@@ -86,13 +86,13 @@ public struct MPFR {
     }
     
     @inlinable
-    public init(_ val: MPZ) {
+    public init(_ val: IntMP) {
         mpfr_init(value)
         mpfr_set_z(value, val.value, rounding.rule)
     }
     
     @inlinable
-    public init(_ val: MPQ) {
+    public init(_ val: QuotMP) {
         let num = val.num.value
         let den = val.den.value
         mpfr_init(value)
@@ -121,7 +121,7 @@ public struct MPFR {
             mpfr_set_ui(value, su!, rounding.rule)
             return
         }
-        let sz = source as? MPZ
+        let sz = source as? IntMP
         if sz != nil {
             mpfr_init(value)
             mpfr_set_z(value, sz!.value, rounding.rule)
@@ -132,7 +132,7 @@ public struct MPFR {
     
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryFloatingPoint {
-        let fr = source as? MPFR
+        let fr = source as? FloatMP
         if fr != nil {
             mpfr_init(value)
             mpfr_set(value, fr!.value, rounding.rule)
@@ -148,7 +148,7 @@ public struct MPFR {
     }
     
     public init<T>(_ source: T) where T : BinaryFloatingPoint {
-        let fr = source as? MPFR
+        let fr = source as? FloatMP
         if fr != nil {
             mpfr_init(value)
             mpfr_set(value, fr!.value, rounding.rule)
@@ -165,7 +165,7 @@ public struct MPFR {
     
     @inlinable
     public init<T>(_ source: T) where T : BinaryInteger {
-        let sz = source as? MPZ
+        let sz = source as? IntMP
         if sz != nil {
             mpfr_init(value)
             mpfr_set_z(value, sz!.value, rounding.rule)
@@ -208,39 +208,39 @@ public struct MPFR {
 
 extension FloatingPointRoundingRule {
     @usableFromInline
-    internal var rule: MPFR.Round {
+    internal var rule: FloatMP.Round {
         switch self {
         case .toNearestOrEven:
-            return MPFR.nearest
+            return FloatMP.nearest
         case .towardZero:
-            return MPFR.toward_zero
+            return FloatMP.toward_zero
         case .up:
-            return MPFR.toward_plus_inf
+            return FloatMP.toward_plus_inf
         case .down:
-            return MPFR.toward_minus_inf
+            return FloatMP.toward_minus_inf
         case .toNearestOrAwayFromZero:
-            return MPFR.nearest_with_ties_away
+            return FloatMP.nearest_with_ties_away
         case .awayFromZero:
-            return MPFR.away
+            return FloatMP.away
         default:
             fatalError("Unknown rounding rule: \(self)")
         }
     }
 
     @usableFromInline
-    internal static func from(_ rule: MPFR.Round) -> Self {
+    internal static func from(_ rule: FloatMP.Round) -> Self {
         switch rule {
-        case MPFR.nearest:
+        case FloatMP.nearest:
             return .toNearestOrEven
-        case MPFR.toward_zero:
+        case FloatMP.toward_zero:
             return .towardZero
-        case MPFR.toward_plus_inf:
+        case FloatMP.toward_plus_inf:
             return .up
-        case MPFR.toward_minus_inf:
+        case FloatMP.toward_minus_inf:
             return .down
-        case MPFR.nearest_with_ties_away:
+        case FloatMP.nearest_with_ties_away:
             return .toNearestOrAwayFromZero
-        case MPFR.away:
+        case FloatMP.away:
             return .awayFromZero
         default:
             fatalError("Unknown rounding rule: \(rule)")
@@ -248,7 +248,7 @@ extension FloatingPointRoundingRule {
     }
 }
 
-extension MPFR: Comparable {
+extension FloatMP: Comparable {
     @inlinable
     public static func == (lhs: Self, rhs: Self) -> Bool {
         return mpfr_cmp(lhs.value, rhs.value) == 0
@@ -325,7 +325,7 @@ extension MPFR: Comparable {
     }
 }
 
-extension MPFR: ExpressibleByIntegerLiteral {
+extension FloatMP: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = Int
 
     public init(integerLiteral value: IntegerLiteralType) {
@@ -334,7 +334,7 @@ extension MPFR: ExpressibleByIntegerLiteral {
     }
 }
 
-extension MPFR: ExpressibleByFloatLiteral {
+extension FloatMP: ExpressibleByFloatLiteral {
     public typealias FloatLiteralType = Double
     
     public init(floatLiteral value: FloatLiteralType) {
@@ -343,7 +343,7 @@ extension MPFR: ExpressibleByFloatLiteral {
     }
 }
 
-extension MPFR: AdditiveArithmetic {
+extension FloatMP: AdditiveArithmetic {
     public static var zero: Self{
         return Self()
     }
@@ -361,7 +361,7 @@ extension MPFR: AdditiveArithmetic {
     }
 }
 
-extension MPFR: Numeric {
+extension FloatMP: Numeric {
     public typealias Magnitude = Self
     
     public var magnitude: Magnitude {
@@ -381,7 +381,7 @@ extension MPFR: Numeric {
     }
 }
 
-extension MPFR: SignedNumeric {
+extension FloatMP: SignedNumeric {
     static public var isSigned: Bool {
         return true
     }
@@ -406,13 +406,13 @@ extension MPFR: SignedNumeric {
     }
 }
 
-extension MPFR: Hashable {
+extension FloatMP: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(value)
     }
 }
 
-extension MPFR: ExpressibleByStringLiteral {
+extension FloatMP: ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
 
     @inlinable
@@ -430,8 +430,8 @@ extension MPFR: ExpressibleByStringLiteral {
     }
 }
 
-extension MPFR: BinaryFloatingPoint {
-    public typealias RawSignificand = MPU
+extension FloatMP: BinaryFloatingPoint {
+    public typealias RawSignificand = UIntMP
 
     public typealias RawExponent = mpfr_uexp_t
 
@@ -454,12 +454,12 @@ extension MPFR: BinaryFloatingPoint {
     }
 
     public var binade: Self {
-        let two = MPFR(mpfr_signbit(value) != 0 ? -2 : 2)
+        let two = FloatMP(mpfr_signbit(value) != 0 ? -2 : 2)
         mpfr_set_exp(two.value, mpfr_get_exp(value))
         return two
     }
 
-    public init(sign: FloatingPointSign, exponentBitPattern: mpfr_uexp_t, significandBitPattern: MPU) {
+    public init(sign: FloatingPointSign, exponentBitPattern: mpfr_uexp_t, significandBitPattern: UIntMP) {
         let exp = Exponent(truncatingIfNeeded: exponentBitPattern)
         mpfr_set_z_2exp(value, significandBitPattern.value, exp, rounding.rule)
     }
@@ -483,7 +483,7 @@ extension MPFR: BinaryFloatingPoint {
     }
 
     public var significandBitPattern: RawSignificand {
-        let result = MPU()
+        let result = UIntMP()
         _ = mpfr_get_z_2exp(result.value, value)
         return result
     }
@@ -497,13 +497,13 @@ extension MPFR: BinaryFloatingPoint {
     }
 }
 
-extension MPFR: FloatingPoint {
+extension FloatMP: FloatingPoint {
     public typealias Exponent = mpfr_exp_t
 
-    public typealias Stride = MPFR
+    public typealias Stride = FloatMP
 
     @inlinable
-    public init(sign: FloatingPointSign, exponent: Exponent, significand: MPFR) {
+    public init(sign: FloatingPointSign, exponent: Exponent, significand: FloatMP) {
         mpfr_init(value)
         mpfr_abs(value, significand.value, significand.rounding.rule)
         if sign == .minus {
@@ -517,7 +517,7 @@ extension MPFR: FloatingPoint {
     }
 
     @inlinable
-    public init(signOf sign: MPFR, magnitudeOf mag: MPFR) {
+    public init(signOf sign: FloatMP, magnitudeOf mag: FloatMP) {
         mpfr_init(value)
         mpfr_copysign(value, mag.value, sign.value, mag.rounding.rule)
     }
@@ -526,30 +526,30 @@ extension MPFR: FloatingPoint {
         return 2
     }
 
-    public static var nan: MPFR {
+    public static var nan: FloatMP {
         let result = Self()
         mpfr_set_nan(result.value)
         return result
     }
 
-    public static var signalingNaN: MPFR {
+    public static var signalingNaN: FloatMP {
         let result = Self()
         mpfr_set_nan(result.value)
         mpfr_set_nanflag()
         return result
     }
 
-    public static var infinity: MPFR {
+    public static var infinity: FloatMP {
         let result = Self()
         mpfr_set_inf(result.value, 1)
         return result
     }
 
-    public static var greatestFiniteMagnitude: MPFR {
+    public static var greatestFiniteMagnitude: FloatMP {
         fatalError("Not implemented")
     }
 
-    public static var pi: MPFR {
+    public static var pi: FloatMP {
         let PI = Self()
         mpfr_const_pi(PI.value, PI.rounding.rule)
         return PI
@@ -559,15 +559,15 @@ extension MPFR: FloatingPoint {
         mpfr_rint(value, value, rule.rule)
     }
 
-    public var ulp: MPFR {
+    public var ulp: FloatMP {
         fatalError("Not implemented")
     }
 
-    public static var leastNormalMagnitude: MPFR {
+    public static var leastNormalMagnitude: FloatMP {
         fatalError("Not implemented")
     }
 
-    public static var leastNonzeroMagnitude: MPFR {
+    public static var leastNonzeroMagnitude: FloatMP {
         fatalError("Not implemented")
     }
 
@@ -582,25 +582,25 @@ extension MPFR: FloatingPoint {
         return mpfr_get_exp(value)
     }
 
-    public var significand: MPFR {
+    public var significand: FloatMP {
         fatalError("Not implemented")
     }
 
-    public static func / (lhs: MPFR, rhs: MPFR) -> MPFR {
+    public static func / (lhs: FloatMP, rhs: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_div(result.value, lhs.value, rhs.value, result.rounding.rule)
         return result
     }
 
-    public static func /= (lhs: inout MPFR, rhs: MPFR) {
+    public static func /= (lhs: inout FloatMP, rhs: FloatMP) {
         mpfr_div(lhs.value, lhs.value, rhs.value, lhs.rounding.rule)
     }
 
-    public mutating func formRemainder(dividingBy other: MPFR) {
+    public mutating func formRemainder(dividingBy other: FloatMP) {
         fatalError("Not implemented")
     }
 
-    public mutating func formTruncatingRemainder(dividingBy other: MPFR) {
+    public mutating func formTruncatingRemainder(dividingBy other: FloatMP) {
         fatalError("Not implemented")
     }
 
@@ -608,27 +608,27 @@ extension MPFR: FloatingPoint {
         fatalError("Not implemented")
     }
 
-    public mutating func addProduct(_ lhs: MPFR, _ rhs: MPFR) {
+    public mutating func addProduct(_ lhs: FloatMP, _ rhs: FloatMP) {
         fatalError("Not implemented")
     }
 
-    public var nextUp: MPFR {
+    public var nextUp: FloatMP {
         fatalError("Not implemented")
     }
 
-    public func isEqual(to other: MPFR) -> Bool {
+    public func isEqual(to other: FloatMP) -> Bool {
         fatalError("Not implemented")
     }
 
-    public func isLess(than other: MPFR) -> Bool {
+    public func isLess(than other: FloatMP) -> Bool {
         fatalError("Not implemented")
     }
 
-    public func isLessThanOrEqualTo(_ other: MPFR) -> Bool {
+    public func isLessThanOrEqualTo(_ other: FloatMP) -> Bool {
         fatalError("Not implemented")
     }
 
-    public func isTotallyOrdered(belowOrEqualTo other: MPFR) -> Bool {
+    public func isTotallyOrdered(belowOrEqualTo other: FloatMP) -> Bool {
         fatalError("Not implemented")
     }
 
@@ -677,7 +677,7 @@ extension MPFR: FloatingPoint {
     }
 }
 
-extension MPFR: CustomStringConvertible {
+extension FloatMP: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
         let size = max(mpfr_get_str_ndigits(base, mpfr_get_prec(value) + 2), 7)
@@ -702,7 +702,7 @@ extension MPFR: CustomStringConvertible {
     }
 }
 
-extension MPFR: CustomDebugStringConvertible {
+extension FloatMP: CustomDebugStringConvertible {
     public var debugDescription: String {
         let base: Int32 = 16
         let size = max(mpfr_get_str_ndigits(base, mpfr_get_prec(value) + 2), 7)
@@ -730,7 +730,7 @@ extension MPFR: CustomDebugStringConvertible {
     }
 }
 
-extension MPFR: LosslessStringConvertible {
+extension FloatMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
         let str = description.cString(using: .ascii)!
@@ -741,171 +741,171 @@ extension MPFR: LosslessStringConvertible {
     }
 }
 
-extension MPFR: Real {
-    public static func atan2(y: MPFR, x: MPFR) -> MPFR {
+extension FloatMP: Real {
+    public static func atan2(y: FloatMP, x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_atan2(result.value, y.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func erf(_ x: MPFR) -> MPFR {
+    public static func erf(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_erf(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func erfc(_ x: MPFR) -> MPFR {
+    public static func erfc(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_erfc(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func exp2(_ x: MPFR) -> MPFR {
+    public static func exp2(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_exp2(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func hypot(_ x: MPFR, _ y: MPFR) -> MPFR {
+    public static func hypot(_ x: FloatMP, _ y: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_hypot(result.value, x.value, y.value, result.rounding.rule)
         return result
     }
 
-    public static func gamma(_ x: MPFR) -> MPFR {
+    public static func gamma(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_gamma(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func log2(_ x: MPFR) -> MPFR {
+    public static func log2(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_log2(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func log10(_ x: MPFR) -> MPFR {
+    public static func log10(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_log10(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func logGamma(_ x: MPFR) -> MPFR {
+    public static func logGamma(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_gamma(result.value, x.value, result.rounding.rule)
         mpfr_log(result.value, result.value, result.rounding.rule)
         return result
     }
 
-    public static func exp(_ x: MPFR) -> MPFR {
+    public static func exp(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_exp(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func expMinusOne(_ x: MPFR) -> MPFR {
+    public static func expMinusOne(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_expm1(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func cosh(_ x: MPFR) -> MPFR {
+    public static func cosh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_cosh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func sinh(_ x: MPFR) -> MPFR {
+    public static func sinh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_sinh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func tanh(_ x: MPFR) -> MPFR {
+    public static func tanh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_tanh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func cos(_ x: MPFR) -> MPFR {
+    public static func cos(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_cos(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func sin(_ x: MPFR) -> MPFR {
+    public static func sin(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_sin(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func tan(_ x: MPFR) -> MPFR {
+    public static func tan(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_tan(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func log(_ x: MPFR) -> MPFR {
+    public static func log(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_log(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func log(onePlus x: MPFR) -> MPFR {
+    public static func log(onePlus x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_log1p(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func acosh(_ x: MPFR) -> MPFR {
+    public static func acosh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_acosh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func asinh(_ x: MPFR) -> MPFR {
+    public static func asinh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_asinh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func atanh(_ x: MPFR) -> MPFR {
+    public static func atanh(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_atanh(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func acos(_ x: MPFR) -> MPFR {
+    public static func acos(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_acos(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func asin(_ x: MPFR) -> MPFR {
+    public static func asin(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_asin(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func atan(_ x: MPFR) -> MPFR {
+    public static func atan(_ x: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_atan(result.value, x.value, result.rounding.rule)
         return result
     }
 
-    public static func pow(_ x: MPFR, _ y: MPFR) -> MPFR {
+    public static func pow(_ x: FloatMP, _ y: FloatMP) -> FloatMP {
         let result = Self()
         mpfr_pow(result.value, x.value, y.value, result.rounding.rule)
         return result
     }
 
-    public static func pow(_ x: MPFR, _ n: Int) -> MPFR {
+    public static func pow(_ x: FloatMP, _ n: Int) -> FloatMP {
         let result = Self()
         mpfr_pow_si(result.value, x.value, n, result.rounding.rule)
         return result
     }
 
-    public static func root(_ x: MPFR, _ n: Int) -> MPFR {
+    public static func root(_ x: FloatMP, _ n: Int) -> FloatMP {
         let result = Self()
         if n < 0 {
             fatalError("Roots can only be calculated from positive numbers")

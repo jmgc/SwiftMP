@@ -8,7 +8,7 @@
 import Foundation
 import Cmpfr
 
-public struct MPZ {
+public struct IntMP {
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
     @usableFromInline internal typealias bWord = UnsafeMutableBufferPointer<Word>
@@ -199,7 +199,7 @@ public struct MPZ {
     }
 }
 
-extension MPZ: Comparable {
+extension IntMP: Comparable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         return mpz_cmp(lhs.value, rhs.value) == 0
     }
@@ -245,11 +245,11 @@ extension MPZ: Comparable {
     }
 }
 
-extension MPZ: ExpressibleByIntegerLiteral {
+extension IntMP: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = Int
 }
 
-extension MPZ: AdditiveArithmetic {
+extension IntMP: AdditiveArithmetic {
     @inlinable
     public static var zero: Self{
         return Self()
@@ -270,7 +270,7 @@ extension MPZ: AdditiveArithmetic {
     }
 }
 
-extension MPZ: Numeric {
+extension IntMP: Numeric {
     public typealias Magnitude = Self
 
     @inlinable
@@ -294,7 +294,7 @@ extension MPZ: Numeric {
 
 }
 
-extension MPZ: SignedNumeric {
+extension IntMP: SignedNumeric {
     @inlinable
     public static prefix func +(_ x: Self) -> Self {
         return x
@@ -313,14 +313,14 @@ extension MPZ: SignedNumeric {
     }
 }
 
-extension MPZ: Hashable {
+extension IntMP: Hashable {
     @inlinable
     public func hash(into hasher: inout Hasher) {
         hasher.combine(value)
     }
 }
 
-extension MPZ: BinaryInteger {
+extension IntMP: BinaryInteger {
     @inlinable
     static public var isSigned: Bool {
         return true
@@ -469,14 +469,14 @@ extension MPZ: BinaryInteger {
     }
 }
 
-extension MPZ: SignedInteger {
+extension IntMP: SignedInteger {
 }
 
-extension MPZ: ExpressibleByStringLiteral {
+extension IntMP: ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
 }
 
-extension MPZ: ExpressibleByFloatLiteral {
+extension IntMP: ExpressibleByFloatLiteral {
     public typealias FloatLiteralType = Double
 
     public init(floatLiteral source: FloatLiteralType) {
@@ -484,7 +484,7 @@ extension MPZ: ExpressibleByFloatLiteral {
     }
 }
 
-extension MPZ: CustomStringConvertible {
+extension IntMP: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
         let size = mpz_sizeinbase(value, base) + 2
@@ -496,7 +496,7 @@ extension MPZ: CustomStringConvertible {
     }
 }
 
-extension MPZ: CustomDebugStringConvertible {
+extension IntMP: CustomDebugStringConvertible {
     public var debugDescription: String {
         let base: Int32 = 16
         let size = mpz_sizeinbase(value, base) + 2
@@ -512,7 +512,7 @@ extension MPZ: CustomDebugStringConvertible {
     }
 }
 
-extension MPZ: LosslessStringConvertible {
+extension IntMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
         let str = description.cString(using: .ascii)!
@@ -523,7 +523,7 @@ extension MPZ: LosslessStringConvertible {
     }
 }
 
-extension MPZ: RandomAccessCollection {
+extension IntMP: RandomAccessCollection {
     public typealias Element = Int
 
     public typealias Index = Int
@@ -551,5 +551,5 @@ extension MPZ: RandomAccessCollection {
     }
 }
 
-extension MPZ: MutableCollection {
+extension IntMP: MutableCollection {
 }

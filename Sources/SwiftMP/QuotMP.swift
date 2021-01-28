@@ -8,7 +8,7 @@
 import Foundation
 import Cmpfr
 
-public struct MPQ {
+public struct QuotMP {
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
     internal typealias bWord = UnsafeMutableBufferPointer<Word>
@@ -44,13 +44,13 @@ public struct MPQ {
     }
 
     @inlinable
-    public init(val: MPZ) {
+    public init(val: IntMP) {
         mpq_init(value)
         mpq_set_z(value, val.value)
     }
 
     @inlinable
-    public init(num: MPZ, den: MPZ) {
+    public init(num: IntMP, den: IntMP) {
         mpq_init(value)
         mpq_set_z(value, num.value)
         mpq_set_den(value, den.value)
@@ -64,15 +64,15 @@ public struct MPQ {
     }
 
     @inlinable
-    public var num: MPZ {
-        let num = MPQ.toPointer(pointee: value[0]._mp_num)
-        return MPZ(mpz: MPZ.bMPZ(start: num, count: 1))!
+    public var num: IntMP {
+        let num = QuotMP.toPointer(pointee: value[0]._mp_num)
+        return IntMP(mpz: IntMP.bMPZ(start: num, count: 1))!
     }
 
     @inlinable
-    public var den: MPZ {
-        let den = MPQ.toPointer(pointee: value[0]._mp_den)
-        return MPZ(mpz: MPZ.bMPZ(start: den, count: 1))!
+    public var den: IntMP {
+        let den = QuotMP.toPointer(pointee: value[0]._mp_den)
+        return IntMP(mpz: IntMP.bMPZ(start: den, count: 1))!
     }
 
     @inlinable
@@ -89,7 +89,7 @@ public struct MPQ {
             mpq_set_ui(value, su!, 1)
             return
         }
-        let sz = source as? MPZ
+        let sz = source as? IntMP
         if sz != nil {
             mpq_init(value)
             mpq_set_z(value, sz!.value)
@@ -121,7 +121,7 @@ public struct MPQ {
 
     @inlinable
     public init<T>(_ source: T) where T : BinaryInteger {
-        let sz = source as? MPZ
+        let sz = source as? IntMP
         if sz != nil {
             mpq_init(value)
             mpq_set_z(value, sz!.value)
@@ -176,7 +176,7 @@ public struct MPQ {
     }
 }
 
-extension MPQ: Comparable {
+extension QuotMP: Comparable {
     @inlinable
     public static func == (lhs: Self, rhs: Self) -> Bool {
         return mpq_cmp(lhs.value, rhs.value) == 0
@@ -223,7 +223,7 @@ extension MPQ: Comparable {
     }
 }
 
-extension MPQ: ExpressibleByIntegerLiteral {
+extension QuotMP: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = Int
 
     public init(integerLiteral value: IntegerLiteralType) {
@@ -232,7 +232,7 @@ extension MPQ: ExpressibleByIntegerLiteral {
     }
 }
 
-extension MPQ: AdditiveArithmetic {
+extension QuotMP: AdditiveArithmetic {
     public static var zero: Self{
         return Self()
     }
@@ -250,7 +250,7 @@ extension MPQ: AdditiveArithmetic {
     }
 }
 
-extension MPQ: Numeric {
+extension QuotMP: Numeric {
     public typealias Magnitude = Self
 
     public var magnitude: Magnitude {
@@ -271,7 +271,7 @@ extension MPQ: Numeric {
 
 }
 
-extension MPQ: SignedNumeric {
+extension QuotMP: SignedNumeric {
     static public var isSigned: Bool {
         return true
     }
@@ -306,17 +306,17 @@ extension MPQ: SignedNumeric {
     }
 }
 
-extension MPQ: Hashable {
+extension QuotMP: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(value)
     }
 }
 
-extension MPQ: ExpressibleByStringLiteral {
+extension QuotMP: ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
 }
 
-extension MPQ: ExpressibleByFloatLiteral {
+extension QuotMP: ExpressibleByFloatLiteral {
     public typealias FloatLiteralType = Double
 
     public init(floatLiteral source: FloatLiteralType) {
@@ -325,11 +325,11 @@ extension MPQ: ExpressibleByFloatLiteral {
     }
 }
 
-extension MPQ: CustomStringConvertible {
+extension QuotMP: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
-        let size = mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_num), base)
-            + mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_den), base) + 3
+        let size = mpz_sizeinbase(QuotMP.toPointer(pointee: value[0]._mp_num), base)
+            + mpz_sizeinbase(QuotMP.toPointer(pointee: value[0]._mp_den), base) + 3
         let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
         _ = mpq_get_str(buffer, base, value)
         let str = String(cString: buffer)
@@ -338,11 +338,11 @@ extension MPQ: CustomStringConvertible {
     }
 }
 
-extension MPQ: CustomDebugStringConvertible {
+extension QuotMP: CustomDebugStringConvertible {
     public var debugDescription: String {
         let base: Int32 = 16
-        let size = mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_num), base)
-            + mpz_sizeinbase(MPQ.toPointer(pointee: value[0]._mp_den), base) + 3
+        let size = mpz_sizeinbase(QuotMP.toPointer(pointee: value[0]._mp_num), base)
+            + mpz_sizeinbase(QuotMP.toPointer(pointee: value[0]._mp_den), base) + 3
         let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
         _ = mpq_get_str(buffer, base, magnitude.value)
         let str = String(cString: buffer)
@@ -355,7 +355,7 @@ extension MPQ: CustomDebugStringConvertible {
     }
 }
 
-extension MPQ: LosslessStringConvertible {
+extension QuotMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
         let str = description.cString(using: .ascii)!
