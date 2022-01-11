@@ -25,10 +25,24 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "Cminigmp",
-            dependencies: []),
+            dependencies: [],
+            resources: [
+                .process("COPYING.LESSERv3"),
+                .process("COPYINGv2"),
+                .process("COPYINGv3"),
+                .process("README.md")]),
         .target(
             name: "Cmpfr",
             dependencies: ["Cminigmp"],
+            resources: [
+                .process("add1sp1_extracted.ch"),
+                .process("COPYING"),
+                .process("COPYING.LESSER"),
+                .process("jyn_asympt.ch"),
+                .process("mul_1_extracted.ch"),
+                .process("round_raw_generic.ch"),
+                .process("README.md"),
+                .process("sub1sp1_extracted.ch")],
             cSettings: [
                 .define("MPFR_USE_MINI_GMP", to: "1"),
                 .define("MINI_GMP_LIMB_TYPE", to: 1.bitWidth == 32 ? "int" : "long"),
