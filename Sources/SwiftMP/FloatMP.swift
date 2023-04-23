@@ -447,11 +447,13 @@ extension FloatMP: BinaryFloatingPoint {
         mpfr_set_d(value, val, rounding.rule)
     }
 
+#if (arch(i386) || arch(x86_64)) && !os(Windows) && !os(Android)
     @inlinable
     public init(_ val: Float80) {
         mpfr_init(value)
         mpfr_set_ld(value, val, rounding.rule)
     }
+#endif
 
     public var binade: Self {
         let two = FloatMP(mpfr_signbit(value) != 0 ? -2 : 2)
