@@ -57,16 +57,6 @@
          </AdditionalOption>
       </AdditionalOptions>
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftMPTests"
-               BuildableName = "SwiftMPTests"
-               BlueprintName = "SwiftMPTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

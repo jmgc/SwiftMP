@@ -116,16 +116,6 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SwiftMPTests"
-               BuildableName = "SwiftMPTests"
-               BlueprintName = "SwiftMPTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "CminigmpTests"
                BuildableName = "CminigmpTests"
                BlueprintName = "CminigmpTests"
