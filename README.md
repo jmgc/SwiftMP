@@ -23,6 +23,11 @@ All four are value types: a copy is independent of the original. The C data is
 shared between copies until one of them is modified (copy-on-write) and is
 freed when the last copy goes away.
 
+## Tutorial
+
+[TUTORIAL.md](TUTORIAL.md) walks through the four types with examples; each
+example is checked by `Tests/SwiftMPTests/TutorialTests.swift`.
+
 ## Licensing
 
 mini-gmp is under GNU license, see the Cmini-gmp package

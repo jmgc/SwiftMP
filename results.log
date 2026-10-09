@@ -1,0 +1,264 @@
+warning: 'swiftmp': /Users/chema/Workspace/SwiftMP/Package.swift:48:70: warning: will never be executed
+46 |             cSettings: [
+47 |                 .define("MPFR_USE_MINI_GMP", to: "1"),
+48 |                 .define("MINI_GMP_LIMB_TYPE", to: 1.bitWidth == 32 ? "int" : "long"),
+   |                                                              |       `- warning: will never be executed
+   |                                                              `- note: condition always evaluates to false
+49 |                 .define("GMP_NUMB_BITS", to: "\(1.bitWidth)"),
+50 |                 .define("HAVE_STDARG", to: "1"),
+
+/Users/chema/Workspace/SwiftMP/Package.swift:65:70: warning: will never be executed
+63 |             cSettings: [
+64 |                 .define("MPFR_USE_MINI_GMP", to: "1"),
+65 |                 .define("MINI_GMP_LIMB_TYPE", to: 1.bitWidth == 32 ? "int" : "long"),
+   |                                                              |       `- warning: will never be executed
+   |                                                              `- note: condition always evaluates to false
+66 |                 .define("GMP_NUMB_BITS", to: "\(1.bitWidth)"),
+67 |                 .define("HAVE_STDARG", to: "1"),
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--58304C5D6DBC2206.txt
+[3/6] Compiling SwiftMPTests TutorialTests.swift
+[4/6] Emitting module SwiftMPTests
+[4/6] Write Objects.LinkFileList
+[5/6] Linking SwiftMPPackageTests
+Build complete! (4.38s)
+Test Suite 'All tests' started at 2026-10-09 17:33:03.187.
+Test Suite 'SwiftMPPackageTests.xctest' started at 2026-10-09 17:33:03.189.
+Test Suite 'CminigmpTests' started at 2026-10-09 17:33:03.189.
+Test Case '-[CminigmpTests testCminigmpAvailability]' started.
+Test Case '-[CminigmpTests testCminigmpAvailability]' passed (0.001 seconds).
+Test Case '-[CminigmpTests testPerformanceExample]' started.
+/Users/chema/Workspace/SwiftMP/Tests/CminigmpTests/CminigmpTests.m:46: Test Case '-[CminigmpTests testPerformanceExample]' measured [Time, seconds] average: 0.000, relative standard deviation: 85.828%, values: [0.000027, 0.000021, 0.000008, 0.000006, 0.000005, 0.000005, 0.000005, 0.000005, 0.000005, 0.000005], performanceMetricID:com.apple.XCTPerformanceMetric_WallClockTime, baselineName: "", baselineAverage: , polarity: prefers smaller, maxPercentRegression: 10.000%, maxPercentRelativeStandardDeviation: 10.000%, maxRegression: 0.100, maxStandardDeviation: 0.100
+Test Case '-[CminigmpTests testPerformanceExample]' passed (0.701 seconds).
+Test Suite 'CminigmpTests' passed at 2026-10-09 17:33:03.891.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.702 (0.702) seconds
+Test Suite 'CmpfrTests' started at 2026-10-09 17:33:03.891.
+Test Case '-[CmpfrTests testCmpfrAvailability]' started.
+Test Case '-[CmpfrTests testCmpfrAvailability]' passed (0.000 seconds).
+Test Case '-[CmpfrTests testPerformanceExample]' started.
+/Users/chema/Workspace/SwiftMP/Tests/CmpfrTests/CmpfrTests.m:68: Test Case '-[CmpfrTests testPerformanceExample]' measured [Time, seconds] average: 0.000, relative standard deviation: 98.118%, values: [0.000031, 0.000009, 0.000006, 0.000005, 0.000005, 0.000005, 0.000005, 0.000005, 0.000005, 0.000005], performanceMetricID:com.apple.XCTPerformanceMetric_WallClockTime, baselineName: "", baselineAverage: , polarity: prefers smaller, maxPercentRegression: 10.000%, maxPercentRelativeStandardDeviation: 10.000%, maxRegression: 0.100, maxStandardDeviation: 0.100
+Test Case '-[CmpfrTests testPerformanceExample]' passed (0.255 seconds).
+Test Suite 'CmpfrTests' passed at 2026-10-09 17:33:04.146.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.255 (0.256) seconds
+Test Suite 'FloatMPTests' started at 2026-10-09 17:33:04.147.
+Test Case '-[SwiftMPTests.FloatMPTests testAdd]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testAdd]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testCompare]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testCompare]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testConversion]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testConversion]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testCos]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testCos]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testCreateFloatMP]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testCreateFloatMP]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testCustomDebugStringConvertible]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testCustomDebugStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testCustomStringConvertible]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testCustomStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testDiv]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testDiv]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testExpressibleByStringLiteral]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testExpressibleByStringLiteral]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testMemory]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testMemory]' passed (0.003 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testMul]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testMul]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testNegate]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testNegate]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testPrecission]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testPrecission]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testShiftLeft]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testShiftLeft]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testShiftRight]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testShiftRight]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testSin]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testSin]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.FloatMPTests testSub]' started.
+Test Case '-[SwiftMPTests.FloatMPTests testSub]' passed (0.000 seconds).
+Test Suite 'FloatMPTests' passed at 2026-10-09 17:33:04.158.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.009 (0.011) seconds
+Test Suite 'IntMPTests' started at 2026-10-09 17:33:04.158.
+Test Case '-[SwiftMPTests.IntMPTests testAdd]' started.
+Test Case '-[SwiftMPTests.IntMPTests testAdd]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testAnd]' started.
+Test Case '-[SwiftMPTests.IntMPTests testAnd]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testBit]' started.
+Test Case '-[SwiftMPTests.IntMPTests testBit]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testBitWidth]' started.
+Test Case '-[SwiftMPTests.IntMPTests testBitWidth]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testCompare]' started.
+Test Case '-[SwiftMPTests.IntMPTests testCompare]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testConversion]' started.
+Test Case '-[SwiftMPTests.IntMPTests testConversion]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testCreateIntMP]' started.
+Test Case '-[SwiftMPTests.IntMPTests testCreateIntMP]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testCustomDebugStringConvertible]' started.
+Test Case '-[SwiftMPTests.IntMPTests testCustomDebugStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testCustomStringConvertible]' started.
+Test Case '-[SwiftMPTests.IntMPTests testCustomStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testDiv]' started.
+Test Case '-[SwiftMPTests.IntMPTests testDiv]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testExpressibleByStringLiteral]' started.
+Test Case '-[SwiftMPTests.IntMPTests testExpressibleByStringLiteral]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testMemory]' started.
+Test Case '-[SwiftMPTests.IntMPTests testMemory]' passed (0.002 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testMod]' started.
+Test Case '-[SwiftMPTests.IntMPTests testMod]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testMul]' started.
+Test Case '-[SwiftMPTests.IntMPTests testMul]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testNegate]' started.
+Test Case '-[SwiftMPTests.IntMPTests testNegate]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testOr]' started.
+Test Case '-[SwiftMPTests.IntMPTests testOr]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testShiftLeft]' started.
+Test Case '-[SwiftMPTests.IntMPTests testShiftLeft]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testShiftRight]' started.
+Test Case '-[SwiftMPTests.IntMPTests testShiftRight]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testSub]' started.
+Test Case '-[SwiftMPTests.IntMPTests testSub]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.IntMPTests testXor]' started.
+Test Case '-[SwiftMPTests.IntMPTests testXor]' passed (0.000 seconds).
+Test Suite 'IntMPTests' passed at 2026-10-09 17:33:04.169.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.008 (0.011) seconds
+Test Suite 'QuotMPTests' started at 2026-10-09 17:33:04.169.
+Test Case '-[SwiftMPTests.QuotMPTests testAdd]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testAdd]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testCompare]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testCompare]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testConversion]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testConversion]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testCreateQuotMP]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testCreateQuotMP]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testCustomDebugStringConvertible]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testCustomDebugStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testCustomStringConvertible]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testCustomStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testDiv]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testDiv]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testExpressibleByStringLiteral]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testExpressibleByStringLiteral]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testMemory]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testMemory]' passed (0.005 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testMul]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testMul]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testNegate]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testNegate]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testShiftLeft]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testShiftLeft]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testShiftRight]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testShiftRight]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.QuotMPTests testSub]' started.
+Test Case '-[SwiftMPTests.QuotMPTests testSub]' passed (0.000 seconds).
+Test Suite 'QuotMPTests' passed at 2026-10-09 17:33:04.180.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.009 (0.011) seconds
+Test Suite 'TutorialTests' started at 2026-10-09 17:33:04.180.
+Test Case '-[SwiftMPTests.TutorialTests testBits]' started.
+Test Case '-[SwiftMPTests.TutorialTests testBits]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testCreatingIntegers]' started.
+Test Case '-[SwiftMPTests.TutorialTests testCreatingIntegers]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testFloatArithmetic]' started.
+Test Case '-[SwiftMPTests.TutorialTests testFloatArithmetic]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testFractions]' started.
+Test Case '-[SwiftMPTests.TutorialTests testFractions]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testFunctions]' started.
+Test Case '-[SwiftMPTests.TutorialTests testFunctions]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testGenericCode]' started.
+Test Case '-[SwiftMPTests.TutorialTests testGenericCode]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testIntegerArithmetic]' started.
+Test Case '-[SwiftMPTests.TutorialTests testIntegerArithmetic]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testNumberTheory]' started.
+Test Case '-[SwiftMPTests.TutorialTests testNumberTheory]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testPrecision]' started.
+Test Case '-[SwiftMPTests.TutorialTests testPrecision]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testRounding]' started.
+Test Case '-[SwiftMPTests.TutorialTests testRounding]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testSpecialValues]' started.
+Test Case '-[SwiftMPTests.TutorialTests testSpecialValues]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testTextAndConversion]' started.
+Test Case '-[SwiftMPTests.TutorialTests testTextAndConversion]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testUnsigned]' started.
+Test Case '-[SwiftMPTests.TutorialTests testUnsigned]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.TutorialTests testValuesAndHashing]' started.
+Test Case '-[SwiftMPTests.TutorialTests testValuesAndHashing]' passed (0.000 seconds).
+Test Suite 'TutorialTests' passed at 2026-10-09 17:33:04.187.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds
+Test Suite 'UIntMPTests' started at 2026-10-09 17:33:04.187.
+Test Case '-[SwiftMPTests.UIntMPTests testAdd]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testAdd]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testAnd]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testAnd]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testBit]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testBit]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testBitWidth]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testBitWidth]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testCompare]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testCompare]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testConversion]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testConversion]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testCreateUIntMP]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testCreateUIntMP]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testCustomDebugStringConvertible]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testCustomDebugStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testCustomStringConvertible]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testCustomStringConvertible]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testDiv]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testDiv]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testExpressibleByStringLiteral]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testExpressibleByStringLiteral]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testMemory]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testMemory]' passed (0.002 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testMod]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testMod]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testMul]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testMul]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testOr]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testOr]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testShiftLeft]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testShiftLeft]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testShiftRight]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testShiftRight]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.UIntMPTests testXor]' started.
+Test Case '-[SwiftMPTests.UIntMPTests testXor]' passed (0.000 seconds).
+Test Suite 'UIntMPTests' passed at 2026-10-09 17:33:04.196.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+Test Suite 'ValueSemanticsTests' started at 2026-10-09 17:33:04.196.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testConcurrentUse]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testConcurrentUse]' passed (0.004 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPConversions]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPConversions]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPCopiesAreIndependent]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPCopiesAreIndependent]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPHashingAndNaN]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testFloatMPHashingAndNaN]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPConversions]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPConversions]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPCopiesAreIndependent]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPCopiesAreIndependent]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPHashing]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testIntMPHashing]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testNegativeShiftCounts]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testNegativeShiftCounts]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testProbablyPrime]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testProbablyPrime]' passed (0.001 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPConversions]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPConversions]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPCopiesAreIndependent]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPCopiesAreIndependent]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPHashing]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testQuotMPHashing]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testTemporariesAreFreed]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testTemporariesAreFreed]' passed (0.008 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPConversions]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPConversions]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPCopiesAreIndependent]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPCopiesAreIndependent]' passed (0.000 seconds).
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPHashing]' started.
+Test Case '-[SwiftMPTests.ValueSemanticsTests testUIntMPHashing]' passed (0.000 seconds).
+Test Suite 'ValueSemanticsTests' passed at 2026-10-09 17:33:04.215.
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.017 (0.019) seconds
+Test Suite 'SwiftMPPackageTests.xctest' passed at 2026-10-09 17:33:04.215.
+	 Executed 103 tests, with 0 failures (0 unexpected) in 1.014 (1.027) seconds
+Test Suite 'All tests' passed at 2026-10-09 17:33:04.215.
+	 Executed 103 tests, with 0 failures (0 unexpected) in 1.014 (1.028) seconds
