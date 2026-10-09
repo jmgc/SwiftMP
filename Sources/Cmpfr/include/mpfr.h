@@ -54,6 +54,13 @@ MPFR_VERSION_NUM(MPFR_VERSION_MAJOR,MPFR_VERSION_MINOR,MPFR_VERSION_PATCHLEVEL)
 #include <gmp.h>
 #else
 #include <mini-gmp.h>
+/* mini-gmp has no random state; mpfr-mini-gmp.h defines a dummy one, but that
+   header is internal, so define it here too for users of the public header. */
+#ifndef MPFR_MINI_GMP_RANDSTATE_DEFINED
+#define MPFR_MINI_GMP_RANDSTATE_DEFINED 1
+typedef long int __gmp_randstate_struct;
+typedef __gmp_randstate_struct gmp_randstate_t[1];
+#endif
 #endif
 
 /* Avoid some problems with macro expansion if the user defines macros

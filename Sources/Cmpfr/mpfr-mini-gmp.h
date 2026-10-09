@@ -30,7 +30,8 @@ typedef long mp_limb_signed_t;
 #define __gmp_free_func gmp_default_free
 #endif
 
-#ifndef gmp_randstate_t
+#if !defined(gmp_randstate_t) && !defined(MPFR_MINI_GMP_RANDSTATE_DEFINED)
+#define MPFR_MINI_GMP_RANDSTATE_DEFINED 1
 typedef long int __gmp_randstate_struct;
 typedef __gmp_randstate_struct gmp_randstate_t[1];
 #endif

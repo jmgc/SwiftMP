@@ -1,6 +1,6 @@
 //
 //  UIntMP.swift
-//  
+//
 //
 //  Created by José María Gómez Cama on 16/01/2021.
 //
@@ -8,207 +8,129 @@
 import Foundation
 import Cmpfr
 
-public struct UIntMP {
+/// Arbitrary-precision unsigned integer (GMP `mpz_t`) with value semantics.
+///
+/// Values built with `init(truncatingIfNeeded:)` from a negative source, or
+/// with `~`, keep a negative internal value. It stands for the two's-complement
+/// bit pattern of `bitWidth` bits, and comparisons wrap both operands to the
+/// wider of their widths.
+public struct UIntMP: Sendable {
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
-    @usableFromInline internal typealias bWord = UnsafeMutableBufferPointer<Word>
     @usableFromInline internal typealias pMPU = UnsafeMutablePointer<mpz_t>
-    @usableFromInline internal typealias bMPU = UnsafeMutableBufferPointer<mpz_t>
     @usableFromInline static let wordBits = MemoryLayout<Word>.size * 8
     @usableFromInline internal static let wordMask = ~Word(0)
 
-    @usableFromInline internal var value =
-        pMPU.allocate(capacity: 1)
+    @usableFromInline internal var storage = _MPZStorage()
 
-    @usableFromInline internal var limbs: bWord {
-
-        return bWord(start: value[0]._mp_d,
-                     count: abs(Int(value[0]._mp_size)))
+    /// The C value. Read it freely; call `makeUnique()` before writing to it.
+    @usableFromInline internal var value: pMPU {
+        return storage.pointer
     }
 
+    /// Copy-on-write: gives this value its own storage before it is modified.
+    @inlinable
+    internal mutating func makeUnique() {
+        if !isKnownUniquelyReferenced(&storage) {
+            storage = _MPZStorage(copying: storage)
+        }
+    }
+
+    /// Keeps the low `bits` bits (two's complement for a negative internal value).
     @usableFromInline
     internal mutating func wrap(_ bits: Int) {
-        let wrap = UIntMP(1) << bits
-        mpz_sub_ui(wrap.value, wrap.value, 1)
-        mpz_and(value, value, wrap.value)
+        makeUnique()
+        mpz_fdiv_r_2exp(value, value, UInt(bits))
     }
 
+    /// `2^bitWidth - 1`.
     @inlinable
     public var mask: UIntMP {
-        let wrap = UIntMP(1) << bitWidth
+        let wrap = UIntMP()
+        mpz_setbit(wrap.value, UInt(bitWidth))
         mpz_sub_ui(wrap.value, wrap.value, 1)
         return wrap
     }
 
     @inlinable
     public init() {
-        mpz_init(value)
-    }
-
-    @usableFromInline
-    internal init?(mpz: bMPU) {
-        if mpz.count != 1 {
-            return nil
-        }
-        value.deallocate()
-        value = pMPU.allocate(capacity: 1)
-        value.initialize(to: mpz[0])
     }
 
     @inlinable
     init(bits: UInt) {
-        mpz_init2(value, bits)
+        mpz_realloc2(value, bits)
     }
 
     @inlinable
     public init(integerLiteral val: IntegerLiteralType) {
-        mpz_init_set_ui(value, val)
+        mpz_set_ui(value, val)
     }
 
+    /// Nil when `source` is negative.
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryInteger {
-        let sz = source as? Self
-        if sz != nil {
-            mpz_init_set(value, sz!.value)
-            return
+        _MPZ.set(value, source)
+        if mpz_sgn(value) < 0 {
+            return nil
         }
-        if T.isSigned {
-            let si = source as? Int
-            if si != nil {
-                if si!.signum() < 0 {
-                    fatalError("arithmetic overflow")
-                }
-                mpz_init_set_si(value, si!)
-                return
-            }
-        } else {
-            let su = source as? UInt
-            if su != nil {
-                mpz_init_set_ui(value, su!)
-                return
-            }
-        }
-        return nil
     }
 
+    /// Nil when `source` is negative, not finite or not integral.
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryFloatingPoint {
-        let d = source as? Double
-        if d != nil {
-            if d! < 0 {
-                fatalError("arithmetic overflow")
-            }
-            mpz_init_set_d(value, d!)
-            return
+        guard _MPZ.isIntegral(source), source >= 0 else {
+            return nil
         }
-        return nil
+        _MPZ.setTruncating(value, source)
     }
 
+    /// Truncates toward zero. Traps when the result is negative, NaN or infinite.
     @inlinable
     public init<T>(_ source: T) where T : BinaryFloatingPoint {
-        let d = source as? Double
-        if d != nil {
-            if d! < 0 {
-                fatalError("arithmetic overflow")
-            }
-            mpz_init_set_d(value, d!)
-            return
-        }
-        fatalError("Not implemented")
+        _MPZ.setTruncating(value, source)
+        precondition(mpz_sgn(value) >= 0, "arithmetic overflow")
     }
 
+    /// Traps when `source` is negative.
     @inlinable
     public init<T>(_ source: T) where T : BinaryInteger {
-        let sz = source as? Self
-        if sz != nil {
-            mpz_init_set(value, sz!.value)
-            return
-        }
-        if T.isSigned {
-            let si = Int(source)
-            if si < 0 {
-                fatalError("arithmetic overflow")
-            }
-            mpz_init_set_si(value, si)
-            return
-        } else {
-            let su = UInt(source)
-            mpz_init_set_ui(value, su)
-            return
-        }
+        _MPZ.set(value, source)
+        precondition(mpz_sgn(value) >= 0, "arithmetic overflow")
     }
 
+    /// Negative values become zero.
     @inlinable
     public init<T>(clamping val: T) where T : BinaryInteger {
-        let sz = val as? Self
-        if sz != nil {
-            if sz! < 0 {
-                mpz_init(value)
-            }
-            mpz_init_set(value, sz!.value)
-            return
+        _MPZ.set(value, val)
+        if mpz_sgn(value) < 0 {
+            mpz_set_ui(value, 0)
         }
-        let si = val as? Int
-        if si != nil {
-            if si! < 0 {
-                mpz_init(value)
-            }
-            mpz_init_set_si(value, si!)
-            return
-        }
-        let su = val as? UInt
-        if su != nil {
-            mpz_init_set_ui(value, su!)
-            return
-        }
-        fatalError("Not implemented")
     }
 
+    /// Keeps the source value; a negative source stands for its two's-complement
+    /// bit pattern (see the type documentation).
     @inlinable
     public init<T>(truncatingIfNeeded source: T) where T : BinaryInteger {
-        let ss = source as? Self
-        if ss != nil {
-            mpz_init_set(value, ss!.value)
-            return
-        }
-        let sz = source as? IntMP
-        if sz != nil {
-            mpz_init_set(value, sz!.value)
-            return
-        }
-        let su = source as? UInt
-        if su != nil {
-            mpz_init_set_ui(value, su!)
-            return
-        }
-        let si = source as? Int
-        if si != nil {
-            mpz_init_set_si(value, si!)
-            return
-        }
+        _MPZ.set(value, source)
     }
 
     @inlinable
     public init(stringLiteral value: StringLiteralType) {
-        let str = value.cString(using: .ascii)!
-        mpz_init_set_str(self.value, str, 0)
-        if mpz_sgn(self.value) < 0 {
-            fatalError("arithmetic overflow")
-        }
+        self.init(stringLiteral: value, base: 0)
     }
 
+    /// Parses `value` in `base` (0 = detect the `0x`, `0b` or `0` prefix).
     @inlinable
     public init(stringLiteral value: StringLiteralType, base: Int) {
-        let str = value.cString(using: .ascii)!
-        mpz_init_set_str(self.value, str, Int32(base))
-        if mpz_sgn(self.value) < 0 {
-            fatalError("arithmetic overflow")
-        }
+        let ok = mpz_set_str(self.value, value, Int32(base)) == 0
+        precondition(ok, "Invalid integer literal: \(value)")
+        precondition(mpz_sgn(self.value) >= 0, "arithmetic overflow")
     }
 
+    /// True when the number is prime or probably prime (Miller-Rabin, 32 rounds).
     @inlinable
     public func probablyPrime() -> Bool {
-        return mpz_probab_prime_p(value, 32) == 0
+        return mpz_probab_prime_p(value, 32) != 0
     }
 
     @inlinable
@@ -232,50 +154,48 @@ public struct UIntMP {
         return result
     }
 
+    /// Number of ones in the low `bitWidth` bits.
     @inlinable
-    var nonzeroBitCount: Int {
-        let u = mask
-        mpz_and(u.value, u.value, value)
-        let ones = Int(truncatingIfNeeded: mpz_popcount(u.value))
-        return ones
+    public var nonzeroBitCount: Int {
+        var u = self
+        u.wrap(bitWidth)
+        return withExtendedLifetime(u) {
+            Int(truncatingIfNeeded: mpz_popcount(u.value))
+        }
+    }
+
+    /// Both operands wrapped to the wider of their widths.
+    @usableFromInline
+    internal static func compare(_ lhs: Self, _ rhs: Self) -> Int32 {
+        if mpz_sgn(lhs.value) >= 0 && mpz_sgn(rhs.value) >= 0 {
+            // Both already fit in their widths: nothing to wrap.
+            return mpz_cmp(lhs.value, rhs.value)
+        }
+        let size = Swift.max(lhs.bitWidth, rhs.bitWidth)
+        var l = lhs
+        var r = rhs
+        l.wrap(size)
+        r.wrap(size)
+        return withExtendedLifetime((l, r)) {
+            mpz_cmp(l.value, r.value)
+        }
     }
 }
 
 extension UIntMP: Comparable {
     @inlinable
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        let lhsSize = lhs.bitWidth
-        let rhsSize = rhs.bitWidth
-        let size = Swift.max(lhsSize, rhsSize)
-        var l = lhs
-        var r = rhs
-        l.wrap(size)
-        r.wrap(size)
-        return mpz_cmp(l.value, r.value) == 0
+        return compare(lhs, rhs) == 0
     }
 
     @inlinable
     public static func < (lhs: Self, rhs: Self) -> Bool {
-        let lhsSize = lhs.bitWidth
-        let rhsSize = rhs.bitWidth
-        let size = Swift.max(lhsSize, rhsSize)
-        var l = lhs
-        var r = rhs
-        l.wrap(size)
-        r.wrap(size)
-        return mpz_cmp(l.value, r.value) < 0
+        return compare(lhs, rhs) < 0
     }
 
     @inlinable
     public static func > (lhs: Self, rhs: Self) -> Bool {
-        let lhsSize = lhs.bitWidth
-        let rhsSize = rhs.bitWidth
-        let size = Swift.max(lhsSize, rhsSize)
-        var l = lhs
-        var r = rhs
-        l.wrap(size)
-        r.wrap(size)
-        return mpz_cmp(l.value, r.value) > 0
+        return compare(lhs, rhs) > 0
     }
 }
 
@@ -285,7 +205,7 @@ extension UIntMP: ExpressibleByIntegerLiteral {
 
 extension UIntMP: AdditiveArithmetic {
     @inlinable
-    public static var zero: Self{
+    public static var zero: Self {
         return Self()
     }
 
@@ -298,6 +218,7 @@ extension UIntMP: AdditiveArithmetic {
 
     @inlinable
     public static func += (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_add(lhs.value, lhs.value, rhs.value)
     }
 
@@ -305,18 +226,15 @@ extension UIntMP: AdditiveArithmetic {
     public static func - (lhs: Self, rhs: Self) -> Self {
         let result = Self()
         mpz_sub(result.value, lhs.value, rhs.value)
-        if (mpz_sgn(result.value) < 0) {
-            fatalError("arithmetic overflow")
-        }
+        precondition(mpz_sgn(result.value) >= 0, "arithmetic overflow")
         return result
     }
 
     @inlinable
     public static func -= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_sub(lhs.value, lhs.value, rhs.value)
-        if (mpz_sgn(lhs.value) < 0) {
-            fatalError("arithmetic overflow")
-        }
+        precondition(mpz_sgn(lhs.value) >= 0, "arithmetic overflow")
     }
 }
 
@@ -339,14 +257,28 @@ extension UIntMP: Numeric {
 
     @inlinable
     public static func *= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_mul(lhs.value, lhs.value, rhs.value)
     }
 }
 
 extension UIntMP: Hashable {
+    /// Hashes a canonical form so that values equal under `==` (which wraps to
+    /// the wider width) hash alike: wrap to `bitWidth`, then drop leading ones
+    /// while the bit below them is also one (`0b1101` and `0b101` both stand
+    /// for the two's-complement value -3).
     @inlinable
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
+        var c = self
+        c.wrap(bitWidth)
+        withExtendedLifetime(c) {
+            var width = mpz_sizeinbase(c.value, 2)
+            while width > 2 && mpz_tstbit(c.value, UInt(width - 2)) != 0 {
+                mpz_clrbit(c.value, UInt(width - 1))
+                width -= 1
+            }
+            _MPZ.hash(c.value, into: &hasher)
+        }
     }
 }
 
@@ -358,12 +290,7 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public func signum() -> Self {
-        let sgn = mpz_sgn(value)
-        if sgn < 0 {
-            return Self(-sgn)
-        } else {
-            return Self(sgn)
-        }
+        return mpz_sgn(value) == 0 ? Self() : Self(integerLiteral: 1)
     }
 
     @inlinable
@@ -374,23 +301,11 @@ extension UIntMP: BinaryInteger {
         return (quotient, reminder)
     }
 
+    /// Words of the low `bitWidth` bits, least significant first.
     @inlinable
     public var words: [Word] {
-        let b = limbs
-        if mpz_sgn(value) < 0 {
-            var v = b.map({~$0})
-            for (d, l) in zip(v, limbs) {
-                assert(d != l)
-            }
-            for idx in v.indices {
-                v[idx] += 1
-                if v[idx] != 0 {
-                    break
-                }
-            }
-            return v
-        }
-        return Array(b)
+        let count = (bitWidth + Self.wordBits - 1) / Self.wordBits
+        return _MPZ.words(value, count: count)
     }
 
     @inlinable
@@ -398,16 +313,12 @@ extension UIntMP: BinaryInteger {
         return mpz_sizeinbase(value, 2) + (mpz_sgn(value) < 0 ? 1 : 0)
     }
 
+    @inlinable
     public var trailingZeroBitCount: Int {
-        let n = abs(Int(value[0]._mp_size))
-        if n == 0 {
-            return 0
+        if mpz_sgn(value) == 0 {
+            return bitWidth
         }
-        let idx = limbs.firstIndex(where: {$0 != 0})
-        if idx == nil {
-            return limbs[0].trailingZeroBitCount
-        }
-        return idx! + limbs[idx!].trailingZeroBitCount
+        return Int(mpz_scan1(value, 0))
     }
 
     @inlinable
@@ -426,6 +337,7 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public static func /= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_tdiv_q(lhs.value, lhs.value, rhs.value)
     }
 
@@ -438,6 +350,7 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public static func %= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_tdiv_r(lhs.value, lhs.value, rhs.value)
     }
 
@@ -450,6 +363,7 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public static func &= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_and(lhs.value, lhs.value, rhs.value)
     }
 
@@ -462,6 +376,7 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public static func |= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_ior(lhs.value, lhs.value, rhs.value)
     }
 
@@ -474,31 +389,44 @@ extension UIntMP: BinaryInteger {
 
     @inlinable
     public static func ^= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpz_xor(lhs.value, lhs.value, rhs.value)
     }
 
+    /// Shift right. A negative count shifts left.
     @inlinable
     public static func >> <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
-        let result = Self()
-        mpz_fdiv_q_2exp(result.value, lhs.value, UInt(rhs))
+        var result = lhs
+        result >>= rhs
         return result
     }
 
     @inlinable
     public static func >>= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
-        mpz_fdiv_q_2exp(lhs.value, lhs.value, UInt(rhs))
+        lhs.makeUnique()
+        if rhs < (0 as RHS) {
+            mpz_mul_2exp(lhs.value, lhs.value, UInt(rhs.magnitude))
+        } else {
+            mpz_fdiv_q_2exp(lhs.value, lhs.value, UInt(rhs))
+        }
     }
 
+    /// Shift left. A negative count shifts right.
     @inlinable
     public static func << <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
-        let result = Self()
-        mpz_mul_2exp(result.value, lhs.value, UInt(rhs))
+        var result = lhs
+        result <<= rhs
         return result
     }
 
     @inlinable
     public static func <<= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
-        mpz_mul_2exp(lhs.value, lhs.value, UInt(rhs))
+        lhs.makeUnique()
+        if rhs < (0 as RHS) {
+            mpz_fdiv_q_2exp(lhs.value, lhs.value, UInt(rhs.magnitude))
+        } else {
+            mpz_mul_2exp(lhs.value, lhs.value, UInt(rhs))
+        }
     }
 }
 
@@ -511,26 +439,15 @@ extension UIntMP: ExpressibleByStringLiteral {
 
 extension UIntMP: CustomStringConvertible {
     public var description: String {
-        let base: Int32 = 10
-        let size = mpz_sizeinbase(value, base) + 2
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
-        _ = mpz_get_str(buffer, base, value)
-        let str = String(cString: buffer)
-        buffer.deallocate()
-        return str
+        return _MPZ.string(value, base: 10)
     }
 }
 
 extension UIntMP: CustomDebugStringConvertible {
     public var debugDescription: String {
-        let base: Int32 = 16
-        let u = mask
-        mpz_and(u.value, u.value, value)
-        let size = mpz_sizeinbase(u.value, base) + 2
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 1)
-        _ = mpz_get_str(buffer, base, u.value)
-        let str = String(cString: buffer)
-        buffer.deallocate()
+        var u = self
+        u.wrap(bitWidth)
+        let str = withExtendedLifetime(u) { _MPZ.string(u.value, base: 16) }
         return "0x\(str)"
     }
 }
@@ -538,9 +455,7 @@ extension UIntMP: CustomDebugStringConvertible {
 extension UIntMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
-        let str = description.cString(using: .ascii)!
-        mpz_init(self.value)
-        if mpz_set_str(self.value, str, 0) != 0 {
+        if mpz_set_str(self.value, description, 0) != 0 {
             return nil
         }
         if mpz_sgn(self.value) < 0 {
@@ -560,6 +475,7 @@ extension UIntMP: RandomAccessCollection {
             return Int(mpz_tstbit(value, UInt(position)))
         }
         set(newValue) {
+            makeUnique()
             if newValue == 0 {
                 mpz_clrbit(value, UInt(position))
             } else {

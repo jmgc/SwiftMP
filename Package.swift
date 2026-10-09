@@ -48,7 +48,7 @@ let package = Package(
                 .define("MINI_GMP_LIMB_TYPE", to: 1.bitWidth == 32 ? "int" : "long"),
                 .define("GMP_NUMB_BITS", to: "\(1.bitWidth)"),
                 .define("HAVE_STDARG", to: "1"),
-                .define(1.littleEndian == 1 ? "HAVE_BIG_ENDIAN" : "HAVE_LITTLE_ENDIAN")
+                .define(1.littleEndian == 1 ? "HAVE_LITTLE_ENDIAN" : "HAVE_BIG_ENDIAN")
             ]),
         .target(
             name: "SwiftMP",
@@ -65,7 +65,7 @@ let package = Package(
                 .define("MINI_GMP_LIMB_TYPE", to: 1.bitWidth == 32 ? "int" : "long"),
                 .define("GMP_NUMB_BITS", to: "\(1.bitWidth)"),
                 .define("HAVE_STDARG", to: "1"),
-                .define(1.littleEndian == 1 ? "HAVE_BIG_ENDIAN" : "HAVE_LITTLE_ENDIAN")
+                .define(1.littleEndian == 1 ? "HAVE_LITTLE_ENDIAN" : "HAVE_BIG_ENDIAN")
             ]),
         .testTarget(
             name: "SwiftMPTests",

@@ -9,7 +9,7 @@
 #include <Cmpfr.h>
 
 void
-testfree (void *p)
+cmpfr_testfree (void *p)
 {
     void (*freefunc) (void *, size_t);
     mp_get_memory_functions (NULL, NULL, &freefunc);
@@ -18,18 +18,18 @@ testfree (void *p)
 }
 
 void
-dump (const char *label, const mpz_t x)
+cmpfr_dump (const char *label, const mpz_t x)
 {
     char *buf = mpz_get_str (NULL, 16, x);
     fprintf (stderr, "%s: %s\n", label, buf);
-    testfree (buf);
+    cmpfr_testfree (buf);
 }
 
-@interface CminigmpTests : XCTestCase
+@interface CmpfrTests : XCTestCase
 
 @end
 
-@implementation CminigmpTests
+@implementation CmpfrTests
 
 - (void)setUp {
     // Put setup code here. This method is called before the invocation of each test method in the class.

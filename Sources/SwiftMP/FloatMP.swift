@@ -1,6 +1,6 @@
 //
 //  FloatMP.swift
-//  
+//
 //
 //  Created by José María Gómez Cama on 16/01/2021.
 //
@@ -9,34 +9,31 @@ import Foundation
 import Cmpfr
 import RealModule
 
-public struct FloatMP {
+/// Arbitrary-precision binary floating point (MPFR `mpfr_t`) with value semantics.
+/// New values use MPFR's default precision (`FloatMP.significandBitCount`).
+public struct FloatMP: Sendable {
     @usableFromInline internal typealias Round = mpfr_rnd_t
     public typealias Precission = mpfr_prec_t
-    
+
     public typealias Word = mp_limb_t
     public typealias Words = [Word]
-    internal typealias bByte = UnsafeMutableBufferPointer<UInt8>
-    internal typealias pMPFR = UnsafeMutablePointer<mpfr_t>
-    internal typealias bMPFR = UnsafeMutableBufferPointer<mpfr_t>
-    
+    @usableFromInline internal typealias pMPFR = UnsafeMutablePointer<mpfr_t>
+
     @usableFromInline static let wordBits = mp_bits_per_limb
     @usableFromInline internal static let mask = ~Word(0)
-    
-    @usableFromInline internal var value = pMPFR.allocate(capacity: 1)
-    
-    @usableFromInline
-    internal static func shift(_ size: Int32) -> Int {
-        switch size {
-        case 8:
-            return 3
-        case 16:
-            return 4
-        case 32:
-            return 5
-        case 64:
-            return 6
-        default:
-            fatalError("Unknows integer size")
+
+    @usableFromInline internal var storage = _MPFRStorage()
+
+    /// The C value. Read it freely; call `makeUnique()` before writing to it.
+    @usableFromInline internal var value: pMPFR {
+        return storage.pointer
+    }
+
+    /// Copy-on-write: gives this value its own storage before it is modified.
+    @inlinable
+    internal mutating func makeUnique() {
+        if !isKnownUniquelyReferenced(&storage) {
+            storage = _MPFRStorage(copying: storage)
         }
     }
 
@@ -57,152 +54,155 @@ public struct FloatMP {
 
     public var rounding: FloatingPointRoundingRule = .from(mpfr_get_default_rounding_mode())
 
-    internal var limbs: UnsafeMutableRawBufferPointer {
-        let p = mpfr_custom_get_significand(value)
-        let len = mpfr_custom_get_size(mpfr_get_prec(value))
-        return UnsafeMutableRawBufferPointer(start: p, count: len)
-    }
-    
     @inlinable
     init() {
-        mpfr_init(value)
-        mpfr_set_zero(value, 1)
     }
-    
+
     @inlinable
     init(precission: Precission) {
-        mpfr_init2(value, precission)
-        mpfr_set_zero(value, 1)
+        storage = _MPFRStorage(precision: precission)
     }
 
     @inlinable
     public init(_ val: IntegerLiteralType) {
-        mpfr_init(value)
-        if val.signum() >= 0 {
-            mpfr_set_ui(value, UInt(abs(val)), rounding.rule)
-        } else {
-            mpfr_set_si(value, Int(val), rounding.rule)
-        }
+        mpfr_set_si(value, val, rounding.rule)
     }
-    
+
     @inlinable
     public init(_ val: IntMP) {
-        mpfr_init(value)
         mpfr_set_z(value, val.value, rounding.rule)
     }
-    
+
     @inlinable
     public init(_ val: QuotMP) {
-        let num = val.num.value
-        let den = val.den.value
-        mpfr_init(value)
-        mpfr_set_z(value, num, rounding.rule)
-        mpfr_div_z(value, value, den, rounding.rule)
+        let num = val.num
+        let den = val.den
+        mpfr_set_z(value, num.value, rounding.rule)
+        mpfr_div_z(value, value, den.value, rounding.rule)
+        withExtendedLifetime((num, den)) {}
     }
-    
+
+    /// Sets the value from an integer and returns MPFR's ternary result
+    /// (0 when exact).
     @usableFromInline
-    static internal func toPointer<T> (pointee value: T) -> UnsafeMutablePointer<T>{
-        let pointer =  UnsafeMutablePointer<T>.allocate(capacity: 1)
-        pointer.initialize(to: value)
-        return pointer
+    internal func _set<T: BinaryInteger>(integer source: T) -> Int32 {
+        let z = IntMP(source)
+        return withExtendedLifetime(z) {
+            mpfr_set_z(value, z.value, rounding.rule)
+        }
     }
-    
+
+    /// Sets the value from a binary floating-point value and returns MPFR's
+    /// ternary result (0 when exact).
+    @usableFromInline
+    internal func _set<T: BinaryFloatingPoint>(float source: T) -> Int32 {
+        if let f = source as? FloatMP {
+            return mpfr_set(value, f.value, rounding.rule)
+        }
+        if let d = source as? Double {
+            return mpfr_set_d(value, d, rounding.rule)
+        }
+        if let f = source as? Float {
+            return mpfr_set_flt(value, f, rounding.rule)
+        }
+#if (arch(i386) || arch(x86_64)) && !os(Windows) && !os(Android)
+        if let l = source as? Float80 {
+            return mpfr_set_ld(value, l, rounding.rule)
+        }
+#endif
+        // Any other IEEE type: (implicit bit + significand) * 2^(exponent - bits).
+        if source.isNaN {
+            mpfr_set_nan(value)
+            return 0
+        }
+        let sign: Int32 = source.sign == .minus ? -1 : 1
+        if source.isInfinite {
+            mpfr_set_inf(value, sign)
+            return 0
+        }
+        if source.isZero {
+            mpfr_set_zero(value, sign)
+            return 0
+        }
+        let z = IntMP()
+        _MPZ.set(z.value, source.significandBitPattern)
+        var exponent = Int(source.exponent)
+        if source.isNormal {
+            mpz_setbit(z.value, UInt(T.significandBitCount))
+        } else {
+            exponent = Int(T.leastNormalMagnitude.exponent)
+        }
+        if sign < 0 {
+            mpz_neg(z.value, z.value)
+        }
+        let ternary = mpfr_set_z_2exp(value, z.value,
+                                      exponent - T.significandBitCount,
+                                      rounding.rule)
+        withExtendedLifetime(z) {}
+        return ternary
+    }
+
+    /// Nil when the integer cannot be represented exactly at the default precision.
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryInteger {
-        let si = source as? Int
-        if si != nil {
-            mpfr_init(value)
-            mpfr_set_si(value, si!, rounding.rule)
-            return
+        if _set(integer: source) != 0 {
+            return nil
         }
-        let su = source as? UInt
-        if su != nil {
-            mpfr_init(value)
-            mpfr_set_ui(value, su!, rounding.rule)
-            return
-        }
-        let sz = source as? IntMP
-        if sz != nil {
-            mpfr_init(value)
-            mpfr_set_z(value, sz!.value, rounding.rule)
-            return
-        }
-        return nil
     }
-    
+
+    /// Nil when `source` cannot be represented exactly at the default precision.
     @inlinable
     public init?<T>(exactly source: T) where T : BinaryFloatingPoint {
-        let fr = source as? FloatMP
-        if fr != nil {
-            mpfr_init(value)
-            mpfr_set(value, fr!.value, rounding.rule)
-            return
+        if _set(float: source) != 0 {
+            return nil
         }
-        let d = source as? Double
-        if d != nil {
-            mpfr_init(value)
-            mpfr_set_d(value, d!, rounding.rule)
-            return
-        }
-        return nil
     }
-    
+
+    /// Rounds `source` to the default precision with the current rounding mode.
     public init<T>(_ source: T) where T : BinaryFloatingPoint {
-        let fr = source as? FloatMP
-        if fr != nil {
-            mpfr_init(value)
-            mpfr_set(value, fr!.value, rounding.rule)
-            return
-        }
-        let d = source as? Double
-        if d != nil {
-            mpfr_init(value)
-            mpfr_set_d(value, d!, rounding.rule)
-            return
-        }
-        fatalError("Not implemented")
+        _ = _set(float: source)
     }
-    
+
+    /// Rounds `source` to the default precision with the current rounding mode.
     @inlinable
     public init<T>(_ source: T) where T : BinaryInteger {
-        let sz = source as? IntMP
-        if sz != nil {
-            mpfr_init(value)
-            mpfr_set_z(value, sz!.value, rounding.rule)
-        }
-        if T.isSigned {
-            let si = Int(truncatingIfNeeded: source)
-            mpfr_init(value)
-            mpfr_set_si(value, si, rounding.rule)
-        } else {
-            let su = UInt(truncatingIfNeeded: source)
-            mpfr_init(value)
-            mpfr_set_ui(value, su, rounding.rule)
-        }
+        _ = _set(integer: source)
     }
-    
+
     @inlinable
     public static func >> <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
-        let result = Self()
-        mpfr_div_2exp(result.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        var result = lhs
+        result >>= rhs
         return result
     }
-    
+
+    /// Divides by `2^rhs`. A negative count multiplies.
     @inlinable
     public static func >>= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
-        mpfr_div_2exp(lhs.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        lhs.makeUnique()
+        if rhs < (0 as RHS) {
+            mpfr_mul_2exp(lhs.value, lhs.value, UInt(rhs.magnitude), lhs.rounding.rule)
+        } else {
+            mpfr_div_2exp(lhs.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        }
     }
-    
+
     @inlinable
     public static func << <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger {
-        let result = Self()
-        mpfr_mul_2exp(result.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        var result = lhs
+        result <<= rhs
         return result
     }
-    
+
+    /// Multiplies by `2^rhs`. A negative count divides.
     @inlinable
     public static func <<= <RHS>(lhs: inout Self, rhs: RHS) where RHS : BinaryInteger {
-        mpfr_mul_2exp(lhs.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        lhs.makeUnique()
+        if rhs < (0 as RHS) {
+            mpfr_div_2exp(lhs.value, lhs.value, UInt(rhs.magnitude), lhs.rounding.rule)
+        } else {
+            mpfr_mul_2exp(lhs.value, lhs.value, UInt(rhs), lhs.rounding.rule)
+        }
     }
 }
 
@@ -248,80 +248,93 @@ extension FloatingPointRoundingRule {
     }
 }
 
+/// IEEE comparisons: NaN is unordered and never equal, -0 == +0.
 extension FloatMP: Comparable {
     @inlinable
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        return mpfr_cmp(lhs.value, rhs.value) == 0
+        return mpfr_equal_p(lhs.value, rhs.value) != 0
     }
-    
+
     @inlinable
     public static func ==<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
-        return mpfr_cmp(lhs.value, Self(rhs).value) == 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_equal_p(lhs.value, r.value) != 0 }
     }
-    
+
     @inlinable
     public static func ==<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
-        return mpfr_cmp(Self(lhs).value, rhs.value) == 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_equal_p(l.value, rhs.value) != 0 }
     }
-    
+
     @inlinable
     public static func ==<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryFloatingPoint {
-        return mpfr_cmp(lhs.value, Self(rhs).value) == 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_equal_p(lhs.value, r.value) != 0 }
     }
 
     @inlinable
     public static func ==<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryFloatingPoint {
-        return mpfr_cmp(Self(lhs).value, rhs.value) == 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_equal_p(l.value, rhs.value) != 0 }
     }
 
     @inlinable
     public static func < (lhs: Self, rhs: Self) -> Bool {
-        return mpfr_cmp(lhs.value, rhs.value) < 0
+        return mpfr_less_p(lhs.value, rhs.value) != 0
     }
-    
+
     @inlinable
     public static func <<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
-        return mpfr_cmp(lhs.value, Self(rhs).value) < 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_less_p(lhs.value, r.value) != 0 }
     }
-    
+
     @inlinable
     public static func <<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
-        return mpfr_cmp(Self(lhs).value, rhs.value) < 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_less_p(l.value, rhs.value) != 0 }
     }
-    
+
     @inlinable
     public static func <<RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryFloatingPoint {
-        return mpfr_cmp(lhs.value, Self(rhs).value) < 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_less_p(lhs.value, r.value) != 0 }
     }
 
     @inlinable
     public static func <<LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryFloatingPoint {
-        return mpfr_cmp(Self(lhs).value, rhs.value) < 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_less_p(l.value, rhs.value) != 0 }
     }
 
     @inlinable
     public static func > (lhs: Self, rhs: Self) -> Bool {
-        return mpfr_cmp(lhs.value, rhs.value) > 0
+        return mpfr_greater_p(lhs.value, rhs.value) != 0
     }
-    
+
     @inlinable
     public static func ><RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryInteger {
-        return mpfr_cmp(lhs.value, Self(rhs).value) > 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_greater_p(lhs.value, r.value) != 0 }
     }
-    
+
     @inlinable
     public static func ><LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryInteger {
-        return mpfr_cmp(Self(lhs).value, rhs.value) > 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_greater_p(l.value, rhs.value) != 0 }
     }
 
     @inlinable
     public static func ><RHS> (lhs: Self, rhs: RHS) -> Bool where RHS : BinaryFloatingPoint {
-        return mpfr_cmp(lhs.value, Self(rhs).value) > 0
+        let r = Self(rhs)
+        return withExtendedLifetime(r) { mpfr_greater_p(lhs.value, r.value) != 0 }
     }
 
     @inlinable
     public static func ><LHS> (lhs: LHS, rhs: Self) -> Bool where LHS : BinaryFloatingPoint {
-        return mpfr_cmp(Self(lhs).value, rhs.value) > 0
+        let l = Self(lhs)
+        return withExtendedLifetime(l) { mpfr_greater_p(l.value, rhs.value) != 0 }
     }
 }
 
@@ -329,54 +342,63 @@ extension FloatMP: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = Int
 
     public init(integerLiteral value: IntegerLiteralType) {
-        mpfr_init(self.value)
         mpfr_set_si(self.value, value, rounding.rule)
     }
 }
 
 extension FloatMP: ExpressibleByFloatLiteral {
     public typealias FloatLiteralType = Double
-    
+
     public init(floatLiteral value: FloatLiteralType) {
-        mpfr_init(self.value)
         mpfr_set_d(self.value, value, rounding.rule)
     }
 }
 
 extension FloatMP: AdditiveArithmetic {
-    public static var zero: Self{
+    public static var zero: Self {
         return Self()
     }
-    
+
     public static func + (lhs: Self, rhs: Self) -> Self {
         let result = Self()
         mpfr_add(result.value, lhs.value, rhs.value, result.rounding.rule)
         return result
     }
-    
+
+    public static func += (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
+        mpfr_add(lhs.value, lhs.value, rhs.value, lhs.rounding.rule)
+    }
+
     public static func - (lhs: Self, rhs: Self) -> Self {
         let result = Self()
         mpfr_sub(result.value, lhs.value, rhs.value, result.rounding.rule)
         return result
     }
+
+    public static func -= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
+        mpfr_sub(lhs.value, lhs.value, rhs.value, lhs.rounding.rule)
+    }
 }
 
 extension FloatMP: Numeric {
     public typealias Magnitude = Self
-    
+
     public var magnitude: Magnitude {
         let result = Self()
         mpfr_abs(result.value, value, rounding.rule)
         return result
     }
-    
+
     public static func * (lhs: Self, rhs: Self) -> Self {
         let result = Self()
         mpfr_mul(result.value, lhs.value, rhs.value, result.rounding.rule)
         return result
     }
-    
+
     public static func *= (lhs: inout Self, rhs: Self) {
+        lhs.makeUnique()
         mpfr_mul(lhs.value, lhs.value, rhs.value, lhs.rounding.rule)
     }
 }
@@ -385,30 +407,55 @@ extension FloatMP: SignedNumeric {
     static public var isSigned: Bool {
         return true
     }
-    
+
     public static prefix func +(_ x: Self) -> Self {
         return x
     }
-    
+
     public static prefix func -(_ x: Self) -> Self {
         let result = Self()
         mpfr_neg(result.value, x.value, x.rounding.rule)
         return result
     }
-    
-    public func negate() {
+
+    public mutating func negate() {
+        makeUnique()
         mpfr_neg(value, value, rounding.rule)
     }
-    
+
     @inlinable
     public func signum() -> Self {
-        return Self(mpfr_sgn(value))
+        return Self(integerLiteral: Int(mpfr_sgn(value)))
     }
 }
 
 extension FloatMP: Hashable {
+    /// Hashes the exact value independently of the precision, so values equal
+    /// under `==` hash alike (+0 and -0 included).
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
+        if mpfr_nan_p(value) != 0 {
+            hasher.combine(0 as UInt8)
+            return
+        }
+        if mpfr_inf_p(value) != 0 {
+            hasher.combine(1 as UInt8)
+            hasher.combine(mpfr_signbit(value) != 0)
+            return
+        }
+        if mpfr_zero_p(value) != 0 {
+            hasher.combine(2 as UInt8)
+            return
+        }
+        // value = z * 2^e; remove the trailing zero bits of z.
+        let z = IntMP()
+        var e = mpfr_get_z_2exp(z.value, value)
+        let tz = mpz_scan1(z.value, 0)
+        mpz_fdiv_q_2exp(z.value, z.value, tz)
+        e += mpfr_exp_t(tz)
+        hasher.combine(3 as UInt8)
+        hasher.combine(e)
+        _MPZ.hash(z.value, into: &hasher)
+        withExtendedLifetime(z) {}
     }
 }
 
@@ -417,16 +464,13 @@ extension FloatMP: ExpressibleByStringLiteral {
 
     @inlinable
     public init(stringLiteral value: StringLiteralType) {
-        let str = value.cString(using: .ascii)!
-        mpfr_init(self.value)
-        mpfr_set_str(self.value, str, 0, rounding.rule)
+        self.init(stringLiteral: value, base: 0)
     }
 
     @inlinable
     public init(stringLiteral value: StringLiteralType, base: Int) {
-        let str = value.cString(using: .ascii)!
-        mpfr_init(self.value)
-        mpfr_set_str(self.value, str, Int32(base), rounding.rule)
+        let ok = mpfr_set_str(self.value, value, Int32(base), rounding.rule) == 0
+        precondition(ok, "Invalid floating-point literal: \(value)")
     }
 }
 
@@ -437,20 +481,17 @@ extension FloatMP: BinaryFloatingPoint {
 
     @inlinable
     public init(_ val: Float) {
-        mpfr_init(value)
         mpfr_set_flt(value, val, rounding.rule)
     }
 
     @inlinable
     public init(_ val: Double) {
-        mpfr_init(value)
         mpfr_set_d(value, val, rounding.rule)
     }
 
 #if (arch(i386) || arch(x86_64)) && !os(Windows) && !os(Android)
     @inlinable
     public init(_ val: Float80) {
-        mpfr_init(value)
         mpfr_set_ld(value, val, rounding.rule)
     }
 #endif
@@ -464,6 +505,9 @@ extension FloatMP: BinaryFloatingPoint {
     public init(sign: FloatingPointSign, exponentBitPattern: mpfr_uexp_t, significandBitPattern: UIntMP) {
         let exp = Exponent(truncatingIfNeeded: exponentBitPattern)
         mpfr_set_z_2exp(value, significandBitPattern.value, exp, rounding.rule)
+        if sign == .minus {
+            mpfr_neg(value, value, rounding.rule)
+        }
     }
 
     public static var exponentBitCount: Int {
@@ -476,11 +520,13 @@ extension FloatMP: BinaryFloatingPoint {
         return RawExponent(truncatingIfNeeded: exp)
     }
 
+    /// Precision in bits. Setting it rounds the value to the new precision.
     public var significandWidth: Int {
         get {
             return mpfr_get_prec(value)
         } set (newValue) {
-            mpfr_set_prec(value, newValue)
+            makeUnique()
+            mpfr_prec_round(value, newValue, rounding.rule)
         }
     }
 
@@ -490,6 +536,7 @@ extension FloatMP: BinaryFloatingPoint {
         return result
     }
 
+    /// MPFR's default precision, used by every new value.
     public static var significandBitCount: Int {
         get {
             return mpfr_get_default_prec()
@@ -506,7 +553,6 @@ extension FloatMP: FloatingPoint {
 
     @inlinable
     public init(sign: FloatingPointSign, exponent: Exponent, significand: FloatMP) {
-        mpfr_init(value)
         mpfr_abs(value, significand.value, significand.rounding.rule)
         if sign == .minus {
             mpfr_neg(value, value, significand.rounding.rule)
@@ -520,7 +566,6 @@ extension FloatMP: FloatingPoint {
 
     @inlinable
     public init(signOf sign: FloatMP, magnitudeOf mag: FloatMP) {
-        mpfr_init(value)
         mpfr_copysign(value, mag.value, sign.value, mag.rounding.rule)
     }
 
@@ -558,6 +603,7 @@ extension FloatMP: FloatingPoint {
     }
 
     public mutating func round(_ rule: FloatingPointRoundingRule) {
+        makeUnique()
         mpfr_rint(value, value, rule.rule)
     }
 
@@ -595,43 +641,52 @@ extension FloatMP: FloatingPoint {
     }
 
     public static func /= (lhs: inout FloatMP, rhs: FloatMP) {
+        lhs.makeUnique()
         mpfr_div(lhs.value, lhs.value, rhs.value, lhs.rounding.rule)
     }
 
     public mutating func formRemainder(dividingBy other: FloatMP) {
-        fatalError("Not implemented")
+        makeUnique()
+        mpfr_remainder(value, value, other.value, rounding.rule)
     }
 
     public mutating func formTruncatingRemainder(dividingBy other: FloatMP) {
-        fatalError("Not implemented")
+        makeUnique()
+        mpfr_fmod(value, value, other.value, rounding.rule)
     }
 
     public mutating func formSquareRoot() {
-        fatalError("Not implemented")
+        makeUnique()
+        mpfr_sqrt(value, value, rounding.rule)
     }
 
     public mutating func addProduct(_ lhs: FloatMP, _ rhs: FloatMP) {
-        fatalError("Not implemented")
+        makeUnique()
+        mpfr_fma(value, lhs.value, rhs.value, value, rounding.rule)
     }
 
+    /// The next representable value at this value's precision.
     public var nextUp: FloatMP {
-        fatalError("Not implemented")
+        var result = self
+        result.makeUnique()
+        mpfr_nextabove(result.value)
+        return result
     }
 
     public func isEqual(to other: FloatMP) -> Bool {
-        fatalError("Not implemented")
+        return mpfr_equal_p(value, other.value) != 0
     }
 
     public func isLess(than other: FloatMP) -> Bool {
-        fatalError("Not implemented")
+        return mpfr_less_p(value, other.value) != 0
     }
 
     public func isLessThanOrEqualTo(_ other: FloatMP) -> Bool {
-        fatalError("Not implemented")
+        return mpfr_lessequal_p(value, other.value) != 0
     }
 
     public func isTotallyOrdered(belowOrEqualTo other: FloatMP) -> Bool {
-        fatalError("Not implemented")
+        return mpfr_total_order_p(value, other.value) != 0
     }
 
     public var isNormal: Bool {
@@ -668,7 +723,7 @@ extension FloatMP: FloatingPoint {
 
     public func distance(to other: Self) -> Self {
         let dist = Self()
-        mpfr_sub(dist.value, value, other.value, self.rounding.rule)
+        mpfr_sub(dist.value, other.value, value, self.rounding.rule)
         return dist
     }
 
@@ -683,11 +738,14 @@ extension FloatMP: CustomStringConvertible {
     public var description: String {
         let base: Int32 = 10
         let size = max(mpfr_get_str_ndigits(base, mpfr_get_prec(value) + 2), 7)
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 5)
+        let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: size + 5)
+        defer { buffer.deallocate() }
         var exp: Exponent = 0
         _ = mpfr_get_str(buffer, &exp, base, size, value, rounding.rule)
         var str = String(cString: buffer)
-        buffer.deallocate()
+        if !isFinite {
+            return str
+        }
         let idx = str.startIndex
         if str[idx] == "-" {
             str.insert(contentsOf: ".", at: str.index(idx, offsetBy: 2))
@@ -696,7 +754,7 @@ extension FloatMP: CustomStringConvertible {
         }
         exp -= 1
         if exp < 0 {
-            str += "e-\(exp)"
+            str += "e\(exp)"
         } else {
             str += "e+\(exp)"
         }
@@ -708,12 +766,16 @@ extension FloatMP: CustomDebugStringConvertible {
     public var debugDescription: String {
         let base: Int32 = 16
         let size = max(mpfr_get_str_ndigits(base, mpfr_get_prec(value) + 2), 7)
-        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: size + 5)
-        buffer.assign(repeating: 122, count: size)
+        let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: size + 5)
+        defer { buffer.deallocate() }
+        buffer.initialize(repeating: 122, count: size + 5)
         buffer[size] = 0
         var exp: Exponent = 0
         _ = mpfr_get_str(buffer, &exp, base, size, value, rounding.rule)
         var str = String(cString: buffer)
+        if !isFinite {
+            return str
+        }
         var prefix: String
         if str.first == "-" {
             str.remove(at: str.startIndex)
@@ -724,7 +786,7 @@ extension FloatMP: CustomDebugStringConvertible {
         str.insert(contentsOf: ".", at: str.index(after: str.startIndex))
         exp = 4*(exp - 1)
         if exp < 0 {
-            str += "p-\(exp)"
+            str += "p\(exp)"
         } else {
             str += "p+\(exp)"
         }
@@ -735,9 +797,7 @@ extension FloatMP: CustomDebugStringConvertible {
 extension FloatMP: LosslessStringConvertible {
     @inlinable
     public init?(_ description: String) {
-        let str = description.cString(using: .ascii)!
-        mpfr_init(self.value)
-        if mpfr_set_str(self.value, str, 0, rounding.rule) != 0 {
+        if mpfr_set_str(self.value, description, 0, rounding.rule) != 0 {
             return nil
         }
     }
